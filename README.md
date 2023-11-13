@@ -1,5 +1,8 @@
 # SemanticSlicer
+
 SemanticSlicer is a C# library for slicing text data into smaller pieces while attempting to preserve semantic cohesion.
+
+GitHub: https://github.com/drittich/SemanticSlicer
 
 ## Table of Contents
 
