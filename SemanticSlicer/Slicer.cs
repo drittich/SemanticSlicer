@@ -47,11 +47,8 @@ namespace SemanticSlicer
 			};
 			var chunks = SplitDocumentChunks(documentChunks, _options.MaxChunkTokenCount);
 
-			// number the chunks so if we persist this info we can reassemble them in the correct order if needed
-			for (int i = 0; i < chunks.Count; i++)
-			{
-				chunks[i].Index = i;
-			}
+			// Save the index with the chunk so we can reassemble them in the correct order if needed.
+			chunks.ForEach(chunk => chunk.Index = chunks.IndexOf(chunk));
 
 			return chunks;
 		}
@@ -82,19 +79,15 @@ namespace SemanticSlicer
 					var matches = separator.Regex.Matches(documentChunk.Content);
 					if (matches.Count > 0)
 					{
-						Match? closestMatch = GetMiddleSeparatorMatch(documentChunk, matches);
+						Match? centermostMatch = GetCentermostMatch(documentChunk, matches);
 
-						if (closestMatch!.Index == 0)
+						if (centermostMatch!.Index == 0)
 						{
 							continue;
 						}
 
-						var splitChunks = SplitChunkBySeparatorMatch(documentChunk, separator, closestMatch);
+						var splitChunks = SplitChunkBySeparatorMatch(documentChunk, separator, centermostMatch);
 
-						// For a given separator, we don't want to take too small of a chunk, so if either of the resulting chunks is smaller
-						// than the minimum chunk size we'll move on to the next separator until we find one that works better. We need to
-						// find a balance here, as earlier separators should do a better job of maintaining cohesion, but later separators are
-						// more likely to produce chunks of a more uniform/larger size.
 						if (IsSplitBelowThreshold(splitChunks))
 						{
 							continue;
@@ -120,24 +113,30 @@ namespace SemanticSlicer
 			return output;
 		}
 
+		/// <summary>
+		/// Checks if the token percentage of either of the two provided chunks is below the defined threshold.
+		/// </summary>
+		/// <param name="splitChunks">A tuple containing two chunks of a document.</param>
+		/// <returns>Returns true if either of the chunk's token percentage is below the threshold, otherwise false.</returns>
 		private bool IsSplitBelowThreshold(Tuple<DocumentChunk, DocumentChunk> splitChunks)
 		{
-			var firstHalfChunkPercentage = (float)splitChunks.Item1.TokenCount / _options.MaxChunkTokenCount * 100;
-			var secondHalfChunkPercentage = (float)splitChunks.Item2.TokenCount / _options.MaxChunkTokenCount * 100;
+			// Deconstruct the tuple to get the first and second half of the split chunks
+			(DocumentChunk firstHalfChunk, DocumentChunk secondHalfChunk) = splitChunks;
 
-			if (firstHalfChunkPercentage < _options.MinChunkPercentage || secondHalfChunkPercentage < _options.MinChunkPercentage)
-			{
-				// We split too close to the beginning or end of the content and the chunk is too small.
-				return true;
-			}
+			// Calculate the token percentage of the first half of the chunk
+			float firstHalfChunkPercentage = (float)firstHalfChunk.TokenCount / _options.MaxChunkTokenCount * 100;
 
-			return false;
+			// Calculate the token percentage of the second half of the chunk
+			float secondHalfChunkPercentage = (float)secondHalfChunk.TokenCount / _options.MaxChunkTokenCount * 100;
+
+			// Return true if either of the chunk's token percentage is below the threshold
+			return firstHalfChunkPercentage < _options.MinChunkPercentage || secondHalfChunkPercentage < _options.MinChunkPercentage;
 		}
 
-		private Tuple<DocumentChunk, DocumentChunk> SplitChunkBySeparatorMatch(DocumentChunk documentChunk, Separator separator, Match? closestMatch)
+		private Tuple<DocumentChunk, DocumentChunk> SplitChunkBySeparatorMatch(DocumentChunk documentChunk, Separator separator, Match? match)
 		{
-			int matchIndex = closestMatch!.Index;
-			var splitContent = DoTextSplit(documentChunk.Content, matchIndex, closestMatch.Value, separator.Behavior);
+			int matchIndex = match!.Index;
+			var splitContent = DoTextSplit(documentChunk.Content, matchIndex, match.Value, separator.Behavior);
 
 			var firstHalfContent = splitContent.Item1.Trim();
 			var secondHalfContent = splitContent.Item2.Trim();
@@ -163,10 +162,16 @@ namespace SemanticSlicer
 			return ret;
 		}
 
-		private static Match? GetMiddleSeparatorMatch(DocumentChunk documentChunk, MatchCollection matches)
+		/// <summary>
+		/// Finds the match in the given matches collection that is closest to the center of the document chunk.
+		/// </summary>
+		/// <param name="documentChunk">The document chunk.</param>
+		/// <param name="matches">The matches collection.</param>
+		/// <returns>The match that is closest to the center of the document chunk, or null if the matches collection is empty.</returns>
+		private static Match? GetCentermostMatch(DocumentChunk documentChunk, MatchCollection matches)
 		{
 			int centerIndex = documentChunk.Content.Length / 2;
-			Match? closestMatch = null;
+			Match? centermostMatch = null;
 			int closestDistance = int.MaxValue;
 
 			foreach (Match match in matches.Cast<Match>())
@@ -175,11 +180,11 @@ namespace SemanticSlicer
 				if (distance < closestDistance)
 				{
 					closestDistance = distance;
-					closestMatch = match;
+					centermostMatch = match;
 				}
 			}
 
-			return closestMatch;
+			return centermostMatch;
 		}
 
 		/// <summary>
