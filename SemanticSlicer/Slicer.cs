@@ -1,0 +1,236 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text.RegularExpressions;
+
+using SemanticSlicer.Models;
+
+namespace SemanticSlicer
+{
+	/// <summary>
+	/// A utility class for chunking and subdividing text content based on specified separators.
+	/// </summary>
+	public class Slicer : ISlicer
+	{
+		static readonly Regex LINE_ENDING_REGEX = new Regex(@"\r\n?|\n", RegexOptions.Compiled);
+		static readonly string LINE_ENDING_REPLACEMENT = "\n";
+
+		private SlicerOptions _options;
+		private readonly Tiktoken.Encoding _encoding;
+
+		/// <summary>
+		/// Initializes a new instance of the <see cref="Slicer"/> class with optional SemanticSlicer options.
+		/// </summary>
+		/// <param name="options">Optional SemanticSlicer options.</param>
+		public Slicer(SlicerOptions? options = null)
+		{
+			_options = options ?? new SlicerOptions();
+			_encoding = Tiktoken.Encoding.Get(_options.Encoding);
+		}
+
+		/// <summary>
+		/// Gets a list of document chunks for the specified content and document ID.
+		/// </summary>
+		/// <param name="content">The input content to be chunked.</param>
+		/// <param name="documentId">The identifier for the document.</param>
+		/// <returns>A list of document chunks.</returns>
+		public List<DocumentChunk> GetDocumentChunks(string content, Dictionary<string, object?>? metadata = null)
+		{
+			var massagedContent = NormalizeLineEndings(content).Trim();
+			var tokenCount = _encoding.CountTokens(massagedContent);
+			var documentChunks = new List<DocumentChunk> {
+				new DocumentChunk {
+					Content = massagedContent,
+					Metadata = metadata,
+					TokenCount = tokenCount
+				}
+			};
+			var chunks = SplitDocumentChunks(documentChunks, _options.MaxChunkTokenCount);
+
+			// number the chunks so if we persist this info we can reassemble them in the correct order if needed
+			for (int i = 0; i < chunks.Count; i++)
+			{
+				chunks[i].Index = i;
+			}
+
+			return chunks;
+		}
+
+		/// <summary>
+		/// Recursively subdivides a list of DocumentChunks into chunks that are less than or equal to maxTokens in length.
+		/// </summary>
+		/// <param name="documentChunks">The list of document chunks to be subdivided.</param>
+		/// <param name="separators">The array of chunk separators.</param>
+		/// <param name="maxTokens">The maximum number of tokens allowed in a chunk.</param>
+		/// <returns>The list of subdivided document chunks.</returns>
+		/// <exception cref="Exception">Thrown when unable to subdivide the string with given regular expressions.</exception>
+		private List<DocumentChunk> SplitDocumentChunks(List<DocumentChunk> documentChunks, int maxTokens)
+		{
+			var output = new List<DocumentChunk>();
+
+			foreach (var documentChunk in documentChunks)
+			{
+				if (documentChunk.TokenCount <= maxTokens)
+				{
+					output.Add(documentChunk);
+					continue;
+				}
+
+				bool subdivided = false;
+				foreach (var separator in _options.Separators)
+				{
+					var matches = separator.Regex.Matches(documentChunk.Content);
+					if (matches.Count > 0)
+					{
+						Match? closestMatch = GetMiddleSeparatorMatch(documentChunk, matches);
+
+						if (closestMatch!.Index == 0)
+						{
+							continue;
+						}
+
+						var splitChunks = SplitChunkBySeparatorMatch(documentChunk, separator, closestMatch);
+
+						// For a given separator, we don't want to take too small of a chunk, so if either of the resulting chunks is smaller
+						// than the minimum chunk size we'll move on to the next separator until we find one that works better. We need to
+						// find a balance here, as earlier separators should do a better job of maintaining cohesion, but later separators are
+						// more likely to produce chunks of a more uniform/larger size.
+						if (IsSplitBelowThreshold(splitChunks))
+						{
+							continue;
+						}
+
+						// sanity check
+						if (splitChunks.Item1.Content.Length < documentChunk.Content.Length && splitChunks.Item2.Content.Length < documentChunk.Content.Length)
+						{
+							output.AddRange(SplitDocumentChunks(new List<DocumentChunk> { splitChunks.Item1, splitChunks.Item2 }, maxTokens));
+						}
+
+						subdivided = true;
+						break;
+					}
+				}
+
+				if (!subdivided)
+				{
+					throw new Exception("Unable to subdivide string with given regular expressions");
+				}
+			}
+
+			return output;
+		}
+
+		private bool IsSplitBelowThreshold(Tuple<DocumentChunk, DocumentChunk> splitChunks)
+		{
+			var firstHalfChunkPercentage = (float)splitChunks.Item1.TokenCount / _options.MaxChunkTokenCount * 100;
+			var secondHalfChunkPercentage = (float)splitChunks.Item2.TokenCount / _options.MaxChunkTokenCount * 100;
+
+			if (firstHalfChunkPercentage < _options.MinChunkPercentage || secondHalfChunkPercentage < _options.MinChunkPercentage)
+			{
+				// We split too close to the beginning or end of the content and the chunk is too small.
+				return true;
+			}
+
+			return false;
+		}
+
+		private Tuple<DocumentChunk, DocumentChunk> SplitChunkBySeparatorMatch(DocumentChunk documentChunk, Separator separator, Match? closestMatch)
+		{
+			int matchIndex = closestMatch!.Index;
+			var splitContent = DoTextSplit(documentChunk.Content, matchIndex, closestMatch.Value, separator.Behavior);
+
+			var firstHalfContent = splitContent.Item1.Trim();
+			var secondHalfContent = splitContent.Item2.Trim();
+
+			var firstHalfTokenCount = _encoding.CountTokens(firstHalfContent);
+			var secondHalfTokenCount = _encoding.CountTokens(secondHalfContent);
+
+			var ret = new Tuple<DocumentChunk, DocumentChunk>(
+				new DocumentChunk
+				{
+					Content = firstHalfContent,
+					Metadata = documentChunk.Metadata,
+					TokenCount = firstHalfTokenCount
+				},
+				new DocumentChunk
+				{
+					Content = secondHalfContent,
+					Metadata = documentChunk.Metadata,
+					TokenCount = secondHalfTokenCount
+				}
+			);
+
+			return ret;
+		}
+
+		private static Match? GetMiddleSeparatorMatch(DocumentChunk documentChunk, MatchCollection matches)
+		{
+			int centerIndex = documentChunk.Content.Length / 2;
+			Match? closestMatch = null;
+			int closestDistance = int.MaxValue;
+
+			foreach (Match match in matches.Cast<Match>())
+			{
+				int distance = Math.Abs(centerIndex - match.Index);
+				if (distance < closestDistance)
+				{
+					closestDistance = distance;
+					closestMatch = match;
+				}
+			}
+
+			return closestMatch;
+		}
+
+		/// <summary>
+		/// Splits the content into two strings at the given matchIndex, using the given matchValue as a separator.
+		/// The split point varies based on the separatorType.
+		/// For example, if the separatorType is Prefix, the split point will be the beginning of the matchValue.
+		/// If the separatorType is Suffix, the split point will be the end of the matchValue.
+		/// If the separatorType is Default, the matching content will be removed when splitting.
+		/// </summary>
+		/// <param name="content"></param>
+		/// <param name="matchIndex"></param>
+		/// <param name="matchValue"></param>
+		/// <param name="separatorType"></param>
+		/// <returns></returns>
+		/// <exception cref="Exception"></exception>
+		private static Tuple<string, string> DoTextSplit(string content, int matchIndex, string matchValue, SeparatorBehavior separatorType)
+		{
+			int splitIndex1;
+			int splitIndex2;
+
+			if (separatorType == SeparatorBehavior.Prefix)
+			{
+				splitIndex1 = matchIndex;
+				splitIndex2 = matchIndex;
+			}
+			else if (separatorType == SeparatorBehavior.Suffix)
+			{
+				splitIndex1 = matchIndex + matchValue.Length;
+				splitIndex2 = matchIndex + matchValue.Length;
+			}
+			else if (separatorType == SeparatorBehavior.Remove)
+			{
+				splitIndex1 = matchIndex;
+				splitIndex2 = matchIndex + matchValue.Length;
+			}
+			else
+			{
+				throw new Exception($"Unknown SeparatorType: {separatorType}");
+			}
+
+			return new Tuple<string, string>(content[..splitIndex1], content[splitIndex2..]);
+		}
+
+		/// <summary>
+		/// Normalizes line endings in the input string.
+		/// </summary>
+		/// <param name="input">The input string.</param>
+		/// <returns>The string with normalized line endings.</returns>
+		private static string NormalizeLineEndings(string input)
+		{
+			return LINE_ENDING_REGEX.Replace(input, LINE_ENDING_REPLACEMENT);
+		}
+	}
+}
