@@ -22,7 +22,8 @@ This library accepts text and will break it into smaller chunks, typically usefu
 Simple text document:
 
 ```cs
-// The default options uses text separators, a max chunk size of 1,000, and cl100k_base encoding to count tokens.
+// The default options uses text separators, a max chunk size of 1,000, and 
+// cl100k_base encoding to count tokens.
 var slicer = new Slicer();
 var text = File.ReadAllText("MyDocument.txt");
 var documentChunks = slicer.GetDocumentChunks(text);
@@ -55,7 +56,7 @@ var metadata = new Dictionary<string, object?>();
 metadata["Id"] = 123;
 metadata["FileName"] = "MyDocument.txt";
 var documentChunks = slicer.GetDocumentChunks(text, metadata);
-// all chunks returned will have a Metadata property with the data you passed in
+// All chunks returned will have a Metadata property with the data you passed in.
 ```
 
 ## License
@@ -65,13 +66,3 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## Contact
 
 If you have any questions or feedback, please open an issue on this repository.
-
-
-
-
-
-
-
-
-
-
