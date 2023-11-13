@@ -55,6 +55,7 @@ var metadata = new Dictionary<string, object?>();
 metadata["Id"] = 123;
 metadata["FileName"] = "MyDocument.txt";
 var documentChunks = slicer.GetDocumentChunks(text, metadata);
+// all chunks returned will have a Metadata property with the data you passed in
 ```
 
 ## License
