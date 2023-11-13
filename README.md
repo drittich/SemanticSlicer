@@ -46,7 +46,13 @@ metadata["FileName"] = "MyDocument.txt";
 var documentChunks = slicer.GetDocumentChunks(text, metadata);
 ```
 
+## License
 
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Contact
+
+If you have any questions or feedback, please open an issue on this repository.
 
 
 
