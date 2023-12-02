@@ -5,16 +5,20 @@
     <Nullable>enable</Nullable>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
     <PackageId>drittich.$(AssemblyName)</PackageId>
-    <Title>A library for slicing text data into smaller chunks while attempting to preserve semantic cohesion.</Title>
+    <Title>A library for slicing text data into smaller chunks while attempting to preserve context.</Title>
     <Authors>drittich</Authors>
-    <Description>A library for slicing text data into smaller chunks while attempting to preserve semantic cohesion.</Description>
+    <Description>A library for slicing text data into smaller chunks while attempting to preserve context.</Description>
     <PackageProjectUrl>https://github.com/drittich/SemanticSlicer</PackageProjectUrl>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <RepositoryUrl>https://github.com/drittich/SemanticSlicer</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageTags>ai,openai,gpt,llm,langchain,embeddings</PackageTags>
-    <PackageReleaseNotes>Initial release</PackageReleaseNotes>
+    <PackageReleaseNotes>
+	- Added support for chunking HTML documents
+	- Added support for stripping HTML tags
+	</PackageReleaseNotes>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <Version>1.1.0</Version>
   </PropertyGroup>
 
   <ItemGroup>

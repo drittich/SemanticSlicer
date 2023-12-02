@@ -38,7 +38,29 @@ var text = File.ReadAllText("MyDocument.md");
 var documentChunks = slicer.GetDocumentChunks(text);
 ```
 
-You can pass in your own separators if you wish, e.g., if you wish to add support for HTML documents.
+HTML document:
+
+```cs
+var options = new SlicerOptions { MaxChunkTokenCount = 600, Separators = Separators.Html };
+var slicer = new Slicer(options);
+var text = File.ReadAllText("MyDocument.html");
+var documentChunks = slicer.GetDocumentChunks(text);
+```
+
+Removing HTML tags:
+
+For any content you can choose to remove HTML tags from the chunks to minimize the number of tokens. The inner text is preserved:
+
+```cs
+var options = new SlicerOptions { MaxChunkTokenCount = 600, Separators = Separators.Html, StripHtml = true };
+var slicer = new Slicer(options);
+var text = File.ReadAllText("MyDocument.html");
+var documentChunks = slicer.GetDocumentChunks(text);
+```
+
+Custom separators:
+
+You can pass in your own list if of separators if you wish, e.g., if you wish to add support for other documents.
 
 ## Chunk Order
 

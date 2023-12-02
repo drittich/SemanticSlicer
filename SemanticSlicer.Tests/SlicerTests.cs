@@ -50,7 +50,7 @@ namespace SemanticSlicer.Tests
 		public void GetDocumentChunks_StripsHtml()
 		{
 			// Arrange
-			var options = new SlicerOptions { StripHtml = true };
+			var options = new SlicerOptions { StripHtml = true, Separators = Separators.Html };
 			var slicer = new Slicer(options);
 			string input = "Some <b>HTML</b> content";
 
