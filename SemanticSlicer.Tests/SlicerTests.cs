@@ -45,5 +45,20 @@ namespace SemanticSlicer.Tests
 			// Assert
 			Assert.Equal(metadata["Id"], result[0].Metadata!["Id"]);
 		}
+
+		[Fact]
+		public void GetDocumentChunks_StripsHtml()
+		{
+			// Arrange
+			var options = new SlicerOptions { StripHtml = true };
+			var slicer = new Slicer(options);
+			string input = "Some <b>HTML</b> content";
+
+			// Act
+			var result = slicer.GetDocumentChunks(input, null);
+
+			// Assert
+			Assert.Equal("Some HTML content", result[0].Content);
+		}
 	}
 }

@@ -26,5 +26,10 @@ namespace SemanticSlicer
 		/// Gets or sets the separators used for splitting documents. Default is Separators.Text.
 		/// </summary>
 		public Separator[] Separators { get; set; } = SemanticSlicer.Separators.Text;
+
+		/// <summary>
+		/// Gets or sets a value indicating whether to strip HTML tags from the input text before chunking. Default is false.
+		/// </summary>
+		public bool StripHtml { get; set; }
 	}
 }

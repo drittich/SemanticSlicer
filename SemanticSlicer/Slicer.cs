@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 
+using HtmlAgilityPack;
+
 using SemanticSlicer.Models;
 
 namespace SemanticSlicer
@@ -37,20 +39,37 @@ namespace SemanticSlicer
 		public List<DocumentChunk> GetDocumentChunks(string content, Dictionary<string, object?>? metadata = null)
 		{
 			var massagedContent = NormalizeLineEndings(content).Trim();
-			var tokenCount = _encoding.CountTokens(massagedContent);
+			var effectiveTokenCount = _options.StripHtml
+				? _encoding.CountTokens(StripHtmlTags(massagedContent))
+				: _encoding.CountTokens(massagedContent);
+
 			var documentChunks = new List<DocumentChunk> {
 				new DocumentChunk {
 					Content = massagedContent,
 					Metadata = metadata,
-					TokenCount = tokenCount
+					TokenCount = effectiveTokenCount
 				}
 			};
 			var chunks = SplitDocumentChunks(documentChunks);
 
-			// Save the index with the chunk so we can reassemble them in the correct order if needed.
-			chunks.ForEach(chunk => chunk.Index = chunks.IndexOf(chunk));
+			foreach (var chunk in chunks)
+			{
+				// Save the index with the chunk so they can be reassembled in the correct order
+				chunk.Index = chunks.IndexOf(chunk);
+
+				// Strip HTML tags from the content if requested
+				if (_options.StripHtml)
+					chunk.Content = StripHtmlTags(chunk.Content);
+			}
 
 			return chunks;
+		}
+
+		public string StripHtmlTags(string content)
+		{
+			var doc = new HtmlDocument();
+			doc.LoadHtml(content);
+			return doc.DocumentNode.InnerText;
 		}
 
 		/// <summary>
@@ -141,21 +160,25 @@ namespace SemanticSlicer
 			var firstHalfContent = splitContent.Item1.Trim();
 			var secondHalfContent = splitContent.Item2.Trim();
 
-			var firstHalfTokenCount = _encoding.CountTokens(firstHalfContent);
-			var secondHalfTokenCount = _encoding.CountTokens(secondHalfContent);
+			var effectiveFirstHalfTokenCount = _options.StripHtml
+				? _encoding.CountTokens(StripHtmlTags(firstHalfContent))
+				: _encoding.CountTokens(firstHalfContent);
+			var effectiveSecondHalfTokenCount = _options.StripHtml
+				? _encoding.CountTokens(StripHtmlTags(secondHalfContent))
+				: _encoding.CountTokens(secondHalfContent);
 
 			var ret = new Tuple<DocumentChunk, DocumentChunk>(
 				new DocumentChunk
 				{
 					Content = firstHalfContent,
 					Metadata = documentChunk.Metadata,
-					TokenCount = firstHalfTokenCount
+					TokenCount = effectiveFirstHalfTokenCount
 				},
 				new DocumentChunk
 				{
 					Content = secondHalfContent,
 					Metadata = documentChunk.Metadata,
-					TokenCount = secondHalfTokenCount
+					TokenCount = effectiveSecondHalfTokenCount
 				}
 			);
 
@@ -170,6 +193,8 @@ namespace SemanticSlicer
 		/// <returns>The match that is closest to the center of the document chunk, or null if the matches collection is empty.</returns>
 		private static Match? GetCentermostMatch(DocumentChunk documentChunk, MatchCollection matches)
 		{
+			// In the case where we're removing HTML tags from the chunks, it's too complex to try to find the
+			// centermost match after stripping tags so we do it before, with the asuumption it will be close enough.
 			int centerIndex = documentChunk.Content.Length / 2;
 			Match? centermostMatch = null;
 			int closestDistance = int.MaxValue;
