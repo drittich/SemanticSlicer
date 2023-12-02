@@ -1,7 +1,7 @@
 # SemanticSlicer
 
-[![.NET Core CI - Build](https://github.com/drittich/SemanticSlicer/actions/workflows/build.yml/badge.svg)](https://github.com/drittich/SemanticSlicer/actions/workflows/build.yml)
-[![.NET Core CI - Tests](https://github.com/drittich/SemanticSlicer/actions/workflows/tests.yml/badge.svg)](https://github.com/drittich/SemanticSlicer/actions/workflows/tests.yml)
+[![.NET 8 - Build](https://github.com/drittich/SemanticSlicer/actions/workflows/build.yml/badge.svg)](https://github.com/drittich/SemanticSlicer/actions/workflows/build.yml)
+[![.NET 8 - Tests](https://github.com/drittich/SemanticSlicer/actions/workflows/tests.yml/badge.svg)](https://github.com/drittich/SemanticSlicer/actions/workflows/tests.yml)
 
 SemanticSlicer is a C# library for slicing text data into smaller pieces while attempting to preserve context.
 
@@ -9,15 +9,13 @@ GitHub: [https://github.com/drittich/SemanticSlicer](https://github.com/drittich
 
 ## Table of Contents
 
-- [SemanticSlicer](#semanticslicer)
-	- [Table of Contents](#table-of-contents)
-	- [Overview](#overview)
-	- [Installation](#installation)
-	- [Sample Usage](#sample-usage)
-	- [Chunk Order](#chunk-order)
-	- [Additional Metadata](#additional-metadata)
-	- [License](#license)
-	- [Contact](#contact)
+- [Overview](#overview)
+- [Installation](#installation)
+- [Sample Usage](#sample-usage)
+- [Chunk Order](#chunk-order)
+- [Additional Metadata](#additional-metadata)
+- [License](#license)
+- [Contact](#contact)
 
 ## Overview
 
