@@ -45,6 +45,7 @@ var documentChunks = slicer.GetDocumentChunks(text);
 Markdown document:
 
 ```cs
+// Let's use Markdown separators and reduce the chunk size
 var options = new SlicerOptions { MaxChunkTokenCount = 600, Separators = Separators.Markdown };
 var slicer = new Slicer(options);
 var text = File.ReadAllText("MyDocument.md");
@@ -54,7 +55,7 @@ var documentChunks = slicer.GetDocumentChunks(text);
 HTML document:
 
 ```cs
-var options = new SlicerOptions { MaxChunkTokenCount = 600, Separators = Separators.Html };
+var options = new SlicerOptions { Separators = Separators.Html };
 var slicer = new Slicer(options);
 var text = File.ReadAllText("MyDocument.html");
 var documentChunks = slicer.GetDocumentChunks(text);
@@ -65,7 +66,8 @@ Removing HTML tags:
 For any content you can choose to remove HTML tags from the chunks to minimize the number of tokens. The inner text is preserved:
 
 ```cs
-var options = new SlicerOptions { MaxChunkTokenCount = 600, Separators = Separators.Html, StripHtml = true };
+// Let's remove the HTML tags as they just consume a lot of tokens without adding much value
+var options = new SlicerOptions { Separators = Separators.Html, StripHtml = true };
 var slicer = new Slicer(options);
 var text = File.ReadAllText("MyDocument.html");
 var documentChunks = slicer.GetDocumentChunks(text);
