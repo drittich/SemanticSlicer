@@ -45,7 +45,7 @@ namespace SemanticSlicer
 					TokenCount = tokenCount
 				}
 			};
-			var chunks = SplitDocumentChunks(documentChunks, _options.MaxChunkTokenCount);
+			var chunks = SplitDocumentChunks(documentChunks);
 
 			// Save the index with the chunk so we can reassemble them in the correct order if needed.
 			chunks.ForEach(chunk => chunk.Index = chunks.IndexOf(chunk));
@@ -61,13 +61,13 @@ namespace SemanticSlicer
 		/// <param name="maxTokens">The maximum number of tokens allowed in a chunk.</param>
 		/// <returns>The list of subdivided document chunks.</returns>
 		/// <exception cref="Exception">Thrown when unable to subdivide the string with given regular expressions.</exception>
-		private List<DocumentChunk> SplitDocumentChunks(List<DocumentChunk> documentChunks, int maxTokens)
+		private List<DocumentChunk> SplitDocumentChunks(List<DocumentChunk> documentChunks)
 		{
 			var output = new List<DocumentChunk>();
 
 			foreach (var documentChunk in documentChunks)
 			{
-				if (documentChunk.TokenCount <= maxTokens)
+				if (documentChunk.TokenCount <= _options.MaxChunkTokenCount)
 				{
 					output.Add(documentChunk);
 					continue;
@@ -96,7 +96,7 @@ namespace SemanticSlicer
 						// sanity check
 						if (splitChunks.Item1.Content.Length < documentChunk.Content.Length && splitChunks.Item2.Content.Length < documentChunk.Content.Length)
 						{
-							output.AddRange(SplitDocumentChunks(new List<DocumentChunk> { splitChunks.Item1, splitChunks.Item2 }, maxTokens));
+							output.AddRange(SplitDocumentChunks(new List<DocumentChunk> { splitChunks.Item1, splitChunks.Item2 }));
 						}
 
 						subdivided = true;
