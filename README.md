@@ -7,6 +7,7 @@ GitHub: [https://github.com/drittich/SemanticSlicer](https://github.com/drittich
 ## Table of Contents
 
 - [Overview](#overview)
+- [Installation](#installation)
 - [Sample Usage](#sample-usage)
 - [Chunk Order](#chunk-order)
 - [Additional Metadata](#additional-metadata)
@@ -16,6 +17,18 @@ GitHub: [https://github.com/drittich/SemanticSlicer](https://github.com/drittich
 ## Overview
 
 This library accepts text and will break it into smaller chunks, typically useful for when creating [LLM AI embeddings](https://learn.microsoft.com/en-us/semantic-kernel/memories/embeddings).
+
+## Installation
+
+The package name is `drittich.SemanticSlicer`. You can install this from Nuget via the command line:
+```ps
+dotnet add package drittich.SemanticSlicer
+```
+
+or from the Package Manager Console:
+```ps
+NuGet\Install-Package drittich.SemanticSlicer
+```
 
 ## Sample Usage
 
