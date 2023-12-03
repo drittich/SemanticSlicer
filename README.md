@@ -102,7 +102,7 @@ var documentChunks = slicer.GetDocumentChunks(text, metadata);
 
 ## Adding Headers to Chunks
 
-If you wish you can pass a header to be included at the top of each chunk. Example use cases are to inclucde the document title or tags as 
+If you wish you can pass a header to be included at the top of each chunk. Example use cases are to include the document title or tags as 
 part of the chunk content to help maintain context.
 
 ```cs
