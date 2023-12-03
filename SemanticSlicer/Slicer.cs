@@ -30,18 +30,36 @@ namespace SemanticSlicer
 			_encoding = Tiktoken.Encoding.Get(_options.Encoding);
 		}
 
+
 		/// <summary>
-		/// Gets a list of document chunks for the specified content and document ID.
+		/// Gets a list of document chunks for the given content.
 		/// </summary>
-		/// <param name="content">The input content to be chunked.</param>
-		/// <param name="documentId">The identifier for the document.</param>
-		/// <returns>A list of document chunks.</returns>
-		public List<DocumentChunk> GetDocumentChunks(string content, Dictionary<string, object?>? metadata = null)
+		/// <param name="content">A string representing the content of the document to be chunked.</param>
+		/// <param name="metadata">A dictionary representing the metadata of the document. It is a nullable parameter and its default value is null.</param>
+		/// <param name="chunkHeader">A string representing the header of every chunk. It has a default value of an empty string. It will always have at least one newline character separating it from the chunk content.</param>
+		/// <returns>Returns a list of DocumentChunks after performing a series of actions including normalization, token counting, splitting, indexing, and removing HTML tags, etc.</returns>
+		public List<DocumentChunk> GetDocumentChunks(string content, Dictionary<string, object?>? metadata = null, string chunkHeader = "")
 		{
+			var massagedChunkHeader = chunkHeader;
+			if (!string.IsNullOrWhiteSpace(chunkHeader))
+			{
+				if (!massagedChunkHeader.EndsWith(LINE_ENDING_REPLACEMENT))
+				{
+					massagedChunkHeader = $"{massagedChunkHeader}{LINE_ENDING_REPLACEMENT}";
+				}
+			}
+
+			// make sure chunkHeader token count is less than maxChunkTokenCount
+			var chunkHeaderTokenCount = _encoding.CountTokens(massagedChunkHeader);
+			if (chunkHeaderTokenCount >= _options.MaxChunkTokenCount)
+			{
+				throw new ArgumentOutOfRangeException($"Chunk header token count ({chunkHeaderTokenCount}) is greater than max chunk token count ({_options.MaxChunkTokenCount})");
+			}
+
 			var massagedContent = NormalizeLineEndings(content).Trim();
 			var effectiveTokenCount = _options.StripHtml
-				? _encoding.CountTokens(StripHtmlTags(massagedContent))
-				: _encoding.CountTokens(massagedContent);
+				? _encoding.CountTokens($"{massagedChunkHeader}{StripHtmlTags(massagedContent)}")
+				: _encoding.CountTokens($"{massagedChunkHeader}{massagedContent}");
 
 			var documentChunks = new List<DocumentChunk> {
 				new DocumentChunk {
@@ -50,7 +68,7 @@ namespace SemanticSlicer
 					TokenCount = effectiveTokenCount
 				}
 			};
-			var chunks = SplitDocumentChunks(documentChunks);
+			var chunks = SplitDocumentChunks(documentChunks, massagedChunkHeader);
 
 			foreach (var chunk in chunks)
 			{
@@ -80,7 +98,7 @@ namespace SemanticSlicer
 		/// <param name="maxTokens">The maximum number of tokens allowed in a chunk.</param>
 		/// <returns>The list of subdivided document chunks.</returns>
 		/// <exception cref="Exception">Thrown when unable to subdivide the string with given regular expressions.</exception>
-		private List<DocumentChunk> SplitDocumentChunks(List<DocumentChunk> documentChunks)
+		private List<DocumentChunk> SplitDocumentChunks(List<DocumentChunk> documentChunks, string chunkHeader)
 		{
 			var output = new List<DocumentChunk>();
 
@@ -88,6 +106,7 @@ namespace SemanticSlicer
 			{
 				if (documentChunk.TokenCount <= _options.MaxChunkTokenCount)
 				{
+					documentChunk.Content = $"{chunkHeader}{documentChunk.Content}";
 					output.Add(documentChunk);
 					continue;
 				}
@@ -105,7 +124,7 @@ namespace SemanticSlicer
 							continue;
 						}
 
-						var splitChunks = SplitChunkBySeparatorMatch(documentChunk, separator, centermostMatch);
+						var splitChunks = SplitChunkBySeparatorMatch(documentChunk, chunkHeader, separator, centermostMatch);
 
 						if (IsSplitBelowThreshold(splitChunks))
 						{
@@ -115,7 +134,7 @@ namespace SemanticSlicer
 						// sanity check
 						if (splitChunks.Item1.Content.Length < documentChunk.Content.Length && splitChunks.Item2.Content.Length < documentChunk.Content.Length)
 						{
-							output.AddRange(SplitDocumentChunks(new List<DocumentChunk> { splitChunks.Item1, splitChunks.Item2 }));
+							output.AddRange(SplitDocumentChunks(new List<DocumentChunk> { splitChunks.Item1, splitChunks.Item2 }, chunkHeader));
 						}
 
 						subdivided = true;
@@ -152,7 +171,7 @@ namespace SemanticSlicer
 			return firstHalfChunkPercentage < _options.MinChunkPercentage || secondHalfChunkPercentage < _options.MinChunkPercentage;
 		}
 
-		private Tuple<DocumentChunk, DocumentChunk> SplitChunkBySeparatorMatch(DocumentChunk documentChunk, Separator separator, Match? match)
+		private Tuple<DocumentChunk, DocumentChunk> SplitChunkBySeparatorMatch(DocumentChunk documentChunk, string chunkHeader, Separator separator, Match? match)
 		{
 			int matchIndex = match!.Index;
 			var splitContent = DoTextSplit(documentChunk.Content, matchIndex, match.Value, separator.Behavior);
@@ -160,25 +179,25 @@ namespace SemanticSlicer
 			var firstHalfContent = splitContent.Item1.Trim();
 			var secondHalfContent = splitContent.Item2.Trim();
 
-			var effectiveFirstHalfTokenCount = _options.StripHtml
-				? _encoding.CountTokens(StripHtmlTags(firstHalfContent))
-				: _encoding.CountTokens(firstHalfContent);
-			var effectiveSecondHalfTokenCount = _options.StripHtml
-				? _encoding.CountTokens(StripHtmlTags(secondHalfContent))
-				: _encoding.CountTokens(secondHalfContent);
+			var firstHalfEffectiveTokenCount = _options.StripHtml
+				? _encoding.CountTokens($"{chunkHeader}{StripHtmlTags(firstHalfContent)}")
+				: _encoding.CountTokens($"{chunkHeader}{firstHalfContent}");
+			var secondHalfEffectiveTokenCount = _options.StripHtml
+				? _encoding.CountTokens($"{chunkHeader}{StripHtmlTags(secondHalfContent)}")
+				: _encoding.CountTokens($"{chunkHeader}{secondHalfContent}");
 
 			var ret = new Tuple<DocumentChunk, DocumentChunk>(
 				new DocumentChunk
 				{
 					Content = firstHalfContent,
 					Metadata = documentChunk.Metadata,
-					TokenCount = effectiveFirstHalfTokenCount
+					TokenCount = firstHalfEffectiveTokenCount
 				},
 				new DocumentChunk
 				{
 					Content = secondHalfContent,
 					Metadata = documentChunk.Metadata,
-					TokenCount = effectiveSecondHalfTokenCount
+					TokenCount = secondHalfEffectiveTokenCount
 				}
 			);
 

@@ -14,11 +14,10 @@
     <RepositoryType>git</RepositoryType>
     <PackageTags>ai,openai,gpt,llm,langchain,embeddings</PackageTags>
     <PackageReleaseNotes>
-	- Added support for chunking HTML documents
-	- Added support for stripping HTML tags
+	- Added support for chunk headers
 	</PackageReleaseNotes>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <Version>1.1.0</Version>
+    <Version>1.2.0</Version>
   </PropertyGroup>
 
   <ItemGroup>
