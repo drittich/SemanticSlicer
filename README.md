@@ -14,6 +14,7 @@ GitHub: [https://github.com/drittich/SemanticSlicer](https://github.com/drittich
 - [Sample Usage](#sample-usage)
 - [Chunk Order](#chunk-order)
 - [Additional Metadata](#additional-metadata)
+- [Adding Headers to Chunks](#adding-headers-to-chunks)
 - [License](#license)
 - [Contact](#contact)
 
@@ -97,6 +98,19 @@ metadata["Id"] = 123;
 metadata["FileName"] = "MyDocument.txt";
 var documentChunks = slicer.GetDocumentChunks(text, metadata);
 // All chunks returned will have a Metadata property with the data you passed in.
+```
+
+## Adding Headers to Chunks
+
+If you wish you can pass a header to be included at the top of each chunk. Example use cases are to inclucde the document title or tags as 
+part of the chunk content to help maintain context.
+
+```cs
+var slicer = new Slicer();
+var fileName = "MyDocument.txt";
+var text = File.ReadAllText(fileName);
+var header = $"FileName: {fileName}";
+var documentChunks = slicer.GetDocumentChunks(text, null, header);
 ```
 
 ## License
