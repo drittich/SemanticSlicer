@@ -3,7 +3,7 @@
 [![.NET 8 - Build](https://github.com/drittich/SemanticSlicer/actions/workflows/build.yml/badge.svg)](https://github.com/drittich/SemanticSlicer/actions/workflows/build.yml)
 [![.NET 8 - Tests](https://github.com/drittich/SemanticSlicer/actions/workflows/tests.yml/badge.svg)](https://github.com/drittich/SemanticSlicer/actions/workflows/tests.yml)
 
-SemanticSlicer is a C# library for slicing text data into smaller pieces while attempting to preserve context.
+SemanticSlicer is a C# library for slicing text data into smaller pieces while attempting to break the text on meaningful boundaries. 
 
 GitHub: [https://github.com/drittich/SemanticSlicer](https://github.com/drittich/SemanticSlicer)
 
