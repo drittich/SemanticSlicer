@@ -20,7 +20,7 @@ namespace SemanticSlicer
 		/// <summary>
 		/// Gets or sets the encoding used for semantic processing. Default is "cl100k_base".
 		/// </summary>
-		public string Encoding { get; set; } = "cl100k_base";
+		public Encoding Encoding { get; set; } = Encoding.Cl100K;
 
 		/// <summary>
 		/// Gets or sets the separators used for splitting documents. Default is Separators.Text.

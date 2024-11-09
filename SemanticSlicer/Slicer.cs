@@ -8,6 +8,8 @@ using HtmlAgilityPack;
 
 using SemanticSlicer.Models;
 
+using Tiktoken.Encodings;
+
 namespace SemanticSlicer
 {
 	/// <summary>
@@ -19,7 +21,7 @@ namespace SemanticSlicer
 		static readonly string LINE_ENDING_REPLACEMENT = "\n";
 
 		private SlicerOptions _options;
-		private readonly Tiktoken.Encoding _encoding;
+		private readonly Tiktoken.Encoder _encoder;
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="Slicer"/> class with optional SemanticSlicer options.
@@ -28,7 +30,21 @@ namespace SemanticSlicer
 		public Slicer(SlicerOptions? options = null)
 		{
 			_options = options ?? new SlicerOptions();
-			_encoding = Tiktoken.Encoding.Get(_options.Encoding);
+			_encoder = GetEncoder(_options.Encoding);
+
+		}
+
+		private Tiktoken.Encoder GetEncoder(Encoding encoding)
+		{
+			switch (encoding)
+			{
+				case Encoding.O200K:
+					return new Tiktoken.Encoder(new O200KBase());
+				case Encoding.Cl100K:
+					return new Tiktoken.Encoder(new Cl100KBase());
+				default:
+					throw new ArgumentException($"Encoding {encoding} is not supported.");
+			}
 		}
 
 
@@ -51,7 +67,7 @@ namespace SemanticSlicer
 			}
 
 			// make sure chunkHeader token count is less than maxChunkTokenCount
-			var chunkHeaderTokenCount = _encoding.CountTokens(massagedChunkHeader);
+			var chunkHeaderTokenCount = _encoder.CountTokens(massagedChunkHeader);
 			if (chunkHeaderTokenCount >= _options.MaxChunkTokenCount)
 			{
 				throw new ArgumentOutOfRangeException($"Chunk header token count ({chunkHeaderTokenCount}) is greater than max chunk token count ({_options.MaxChunkTokenCount})");
@@ -66,7 +82,7 @@ namespace SemanticSlicer
 
 			massagedContent = CollapseWhitespace(massagedContent);
 
-			var effectiveTokenCount = _encoding.CountTokens($"{massagedChunkHeader}{massagedContent}");
+			var effectiveTokenCount = _encoder.CountTokens($"{massagedChunkHeader}{massagedContent}");
 
 			var documentChunks = new List<DocumentChunk> {
 				new DocumentChunk {
@@ -109,7 +125,7 @@ namespace SemanticSlicer
 
 			if (!string.IsNullOrWhiteSpace(title))
 			{
-				title += "\n\n";
+				title += $"{LINE_ENDING_REPLACEMENT}{LINE_ENDING_REPLACEMENT}";
 			}
 
 			// remove any script and style tags from body
@@ -143,12 +159,12 @@ namespace SemanticSlicer
 				{
 					if (IsBlockElement(child.Name))
 					{
-						sb.Append("\n");
+						sb.Append(LINE_ENDING_REPLACEMENT);
 					}
 					ProcessNode(child, sb);
 					if (IsBlockElement(child.Name))
 					{
-						sb.Append("\n");
+						sb.Append(LINE_ENDING_REPLACEMENT);
 					}
 				}
 			}
@@ -285,8 +301,8 @@ namespace SemanticSlicer
 			var firstHalfContent = splitContent.Item1.Trim();
 			var secondHalfContent = splitContent.Item2.Trim();
 
-			var firstHalfEffectiveTokenCount = _encoding.CountTokens($"{chunkHeader}{firstHalfContent}");
-			var secondHalfEffectiveTokenCount = _encoding.CountTokens($"{chunkHeader}{secondHalfContent}");
+			var firstHalfEffectiveTokenCount = _encoder.CountTokens($"{chunkHeader}{firstHalfContent}");
+			var secondHalfEffectiveTokenCount = _encoder.CountTokens($"{chunkHeader}{secondHalfContent}");
 
 			var ret = new Tuple<DocumentChunk, DocumentChunk>(
 				new DocumentChunk
