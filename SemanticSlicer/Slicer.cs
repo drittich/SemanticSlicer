@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Text.RegularExpressions;
 
 using HtmlAgilityPack;
@@ -57,9 +58,15 @@ namespace SemanticSlicer
 			}
 
 			var massagedContent = NormalizeLineEndings(content).Trim();
-			var effectiveTokenCount = _options.StripHtml
-				? _encoding.CountTokens($"{massagedChunkHeader}{StripHtmlTags(massagedContent)}")
-				: _encoding.CountTokens($"{massagedChunkHeader}{massagedContent}");
+
+			if (_options.StripHtml)
+			{
+				massagedContent = RemoveNonBodyContent(massagedContent);
+			}
+
+			massagedContent = CollapseWhitespace(massagedContent);
+
+			var effectiveTokenCount = _encoding.CountTokens($"{massagedChunkHeader}{massagedContent}");
 
 			var documentChunks = new List<DocumentChunk> {
 				new DocumentChunk {
@@ -68,26 +75,125 @@ namespace SemanticSlicer
 					TokenCount = effectiveTokenCount
 				}
 			};
+
 			var chunks = SplitDocumentChunks(documentChunks, massagedChunkHeader);
 
 			foreach (var chunk in chunks)
 			{
 				// Save the index with the chunk so they can be reassembled in the correct order
 				chunk.Index = chunks.IndexOf(chunk);
-
-				// Strip HTML tags from the content if requested
-				if (_options.StripHtml)
-					chunk.Content = StripHtmlTags(chunk.Content);
 			}
 
 			return chunks;
 		}
 
-		public string StripHtmlTags(string content)
+		public string RemoveNonBodyContent(string content)
 		{
 			var doc = new HtmlDocument();
 			doc.LoadHtml(content);
-			return doc.DocumentNode.InnerText;
+
+			// get body node
+			var body = doc.DocumentNode.SelectSingleNode("//body");
+
+			if (body == null)
+			{
+				//create a new body node and append all nodes to it
+				body = doc.CreateElement("body");
+				foreach (var node in doc.DocumentNode.ChildNodes)
+				{
+					body.AppendChild(node.Clone());
+				}
+			}
+
+			var title = ExtractTitle(doc);
+
+			if (!string.IsNullOrWhiteSpace(title))
+			{
+				title += "\n\n";
+			}
+
+			// remove any script and style tags from body
+			body.SelectNodes("//script|//style")?.ToList().ForEach(node => node.Remove());
+
+			return $"{title}{GetInnerTextWithSpaces(body).Trim()}";
+		}
+
+		private string GetInnerTextWithSpaces(HtmlNode node)
+		{
+			var sb = new StringBuilder();
+			ProcessNode(node, sb);
+			return sb.ToString();
+		}
+
+		private string CollapseWhitespace(string input)
+		{
+			// don't allow more than 2 line breaks in a row or 2 spaces in a row
+			return Regex.Replace(input, @"(\r?\n){3,}|\s{3,}", "  ");
+		}
+
+		private void ProcessNode(HtmlNode node, StringBuilder sb)
+		{
+			foreach (var child in node.ChildNodes)
+			{
+				if (child.NodeType == HtmlNodeType.Text)
+				{
+					sb.Append(child.InnerText);
+				}
+				else if (child.NodeType == HtmlNodeType.Element)
+				{
+					if (IsBlockElement(child.Name))
+					{
+						sb.Append("\n");
+					}
+					ProcessNode(child, sb);
+					if (IsBlockElement(child.Name))
+					{
+						sb.Append("\n");
+					}
+				}
+			}
+		}
+
+		private bool IsBlockElement(string name)
+		{
+			var blockElements = new HashSet<string>
+	{
+		"address", "article", "aside", "blockquote", "canvas", "dd", "div", "dl", "dt",
+		"fieldset", "figcaption", "figure", "footer", "form", "h1", "h2", "h3", "h4",
+		"h5", "h6", "header", "hr", "li", "main", "nav", "noscript", "ol", "output",
+		"p", "pre", "section", "table", "tfoot", "ul", "video"
+	};
+			return blockElements.Contains(name.ToLower());
+		}
+
+
+		/// <summary>
+		/// Extracts the inner text of the first <title> tag from the HTML content.
+		/// </summary>
+		/// <param name="content">The HTML content as a string.</param>
+		/// <returns>The inner text of the <title> tag, or an empty string if not found.</returns>
+		public string ExtractTitle(HtmlDocument doc)
+		{
+			try
+			{
+				// Select the first <title> node using XPath
+				var titleNode = doc.DocumentNode.SelectSingleNode("//head/title");
+
+				// If not found in <head>, try searching the entire document
+				if (titleNode == null)
+				{
+					titleNode = doc.DocumentNode.SelectSingleNode("//title");
+				}
+
+				// Return the inner text of the <title> node, or an empty string if not found
+				return titleNode?.InnerText.Trim() ?? string.Empty;
+			}
+			catch (Exception ex)
+			{
+				// Optionally log the exception
+				Console.WriteLine($"Error extracting title: {ex.Message}");
+				return string.Empty;
+			}
 		}
 
 		/// <summary>
@@ -179,12 +285,8 @@ namespace SemanticSlicer
 			var firstHalfContent = splitContent.Item1.Trim();
 			var secondHalfContent = splitContent.Item2.Trim();
 
-			var firstHalfEffectiveTokenCount = _options.StripHtml
-				? _encoding.CountTokens($"{chunkHeader}{StripHtmlTags(firstHalfContent)}")
-				: _encoding.CountTokens($"{chunkHeader}{firstHalfContent}");
-			var secondHalfEffectiveTokenCount = _options.StripHtml
-				? _encoding.CountTokens($"{chunkHeader}{StripHtmlTags(secondHalfContent)}")
-				: _encoding.CountTokens($"{chunkHeader}{secondHalfContent}");
+			var firstHalfEffectiveTokenCount = _encoding.CountTokens($"{chunkHeader}{firstHalfContent}");
+			var secondHalfEffectiveTokenCount = _encoding.CountTokens($"{chunkHeader}{secondHalfContent}");
 
 			var ret = new Tuple<DocumentChunk, DocumentChunk>(
 				new DocumentChunk
