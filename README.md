@@ -67,7 +67,7 @@ var documentChunks = slicer.GetDocumentChunks(text);
 
 Removing HTML tags:
 
-For any content you can choose to remove HTML tags from the chunks to minimize the number of tokens. The inner text is preserved:
+For any content you can choose to remove HTML tags from the chunks to minimize the number of tokens. The inner text is preserved, and if there is a `<Title>` tag the title will be pre-pended to the result:
 
 ```cs
 // Let's remove the HTML tags as they just consume a lot of tokens without adding much value
