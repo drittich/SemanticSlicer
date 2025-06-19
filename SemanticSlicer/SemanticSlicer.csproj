@@ -13,10 +13,10 @@
     <RepositoryUrl>https://github.com/drittich/SemanticSlicer</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageTags>ai,openai,gpt,llm,langchain,embeddings</PackageTags>
-    <PackageReleaseNotes>- Updated Tiktoken to v2
+    <PackageReleaseNotes>- Performance improvements
 </PackageReleaseNotes>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <Version>1.4</Version>
+    <Version>1.4.1</Version>
   </PropertyGroup>
 
   <ItemGroup>
@@ -27,8 +27,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="HtmlAgilityPack" Version="1.11.70" />
-    <PackageReference Include="Tiktoken" Version="2.1.0" />
+    <PackageReference Include="HtmlAgilityPack" Version="1.12.1" />
+    <PackageReference Include="Tiktoken" Version="2.2.0" />
   </ItemGroup>
 
 </Project>
