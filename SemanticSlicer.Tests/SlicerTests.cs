@@ -93,16 +93,35 @@ namespace SemanticSlicer.Tests
 
 		// test that an ArgumentOutOfRangeException error is thrown when the chunk header exceeds the max chunk token count
 		[Fact]
-		public void GetDocumentChunks_ThrowsWhenChunkHeaderExceedsMaxChunkTokenCount()
-		{
-			// Arrange
-			var options = new SlicerOptions { MaxChunkTokenCount = 1 };
-			var slicer = new Slicer(options);
+                public void GetDocumentChunks_ThrowsWhenChunkHeaderExceedsMaxChunkTokenCount()
+                {
+                        // Arrange
+                        var options = new SlicerOptions { MaxChunkTokenCount = 1 };
+                        var slicer = new Slicer(options);
 			var chunkHeader = "Title: Whispers of the Woods";
 			string input = "Some content";
 
 			// Act & Assert
-			Assert.Throws<ArgumentOutOfRangeException>(() => slicer.GetDocumentChunks(input, null, chunkHeader));
-		}
-	}
+                        Assert.Throws<ArgumentOutOfRangeException>(() => slicer.GetDocumentChunks(input, null, chunkHeader));
+                }
+
+                [Fact]
+                public void GetDocumentChunks_AssignsSequentialIndexes()
+                {
+                        // Arrange
+                        var options = new SlicerOptions { MaxChunkTokenCount = 100 };
+                        var slicer = new Slicer(options);
+                        string input = @"In the heart of an enchanting forest, kissed by the golden rays of the sun, stood a charming little cottage. The whitewashed wooden walls, thatched roof, and cobblestone path leading to the doorstep were blanketed in hues of vivid green by the elegant garlands of crawling ivy. Vivid flowers in bloom surrounded it, exhaling a perfume that pervaded the air, mingling with the earthy aroma of the forest. Every morning, the cottage awoke to the harmonious symphony of chirping birds, and every night, it fell asleep under the soft, lullaby-like rustling of leaves, rocked by the gentle wind. This cottage, nestled in the heart of nature, seemed an extension of the forest itself, a quiet haven of peace, echoing the profound tranquility of its surroundings.";
+
+                        // Act
+                        var result = slicer.GetDocumentChunks(input);
+
+                        // Assert
+                        Assert.True(result.Count > 1, "Expected multiple chunks to verify indexing.");
+                        for (int i = 0; i < result.Count; i++)
+                        {
+                                Assert.Equal(i, result[i].Index);
+                        }
+                }
+        }
 }

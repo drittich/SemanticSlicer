@@ -94,11 +94,11 @@ namespace SemanticSlicer
 
 			var chunks = SplitDocumentChunks(documentChunks, massagedChunkHeader);
 
-			foreach (var chunk in chunks)
-			{
-				// Save the index with the chunk so they can be reassembled in the correct order
-				chunk.Index = chunks.IndexOf(chunk);
-			}
+                        for (int i = 0; i < chunks.Count; i++)
+                        {
+                                // Save the index with the chunk so they can be reassembled in the correct order
+                                chunks[i].Index = i;
+                        }
 
 			return chunks;
 		}
