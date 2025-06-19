@@ -1,9 +1,14 @@
-# SemanticSlicer
+# 🧠✂️ SemanticSlicer
 
 [![.NET 8 - Build](https://github.com/drittich/SemanticSlicer/actions/workflows/build.yml/badge.svg)](https://github.com/drittich/SemanticSlicer/actions/workflows/build.yml)
 [![.NET 8 - Tests](https://github.com/drittich/SemanticSlicer/actions/workflows/tests.yml/badge.svg)](https://github.com/drittich/SemanticSlicer/actions/workflows/tests.yml)
 
-SemanticSlicer is a C# library for slicing text data into smaller pieces while attempting to break the text on meaningful boundaries. 
+
+
+Smart, recursive text slicing for LLM-ready documents.
+
+**SemanticSlicer** is a lightweight C# library that **recursively splits text** into meaningful chunks—preserving semantic boundaries (sentences, headings, HTML tags) and ideal for **embedding generation** (OpenAI, Azure OpenAI, LangChain, etc.).
+
 
 GitHub: [https://github.com/drittich/SemanticSlicer](https://github.com/drittich/SemanticSlicer)
 
