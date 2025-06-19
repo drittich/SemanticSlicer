@@ -15,10 +15,17 @@ namespace SemanticSlicer
 	/// <summary>
 	/// A utility class for chunking and subdividing text content based on specified separators.
 	/// </summary>
-	public class Slicer : ISlicer
-	{
-		static readonly Regex LINE_ENDING_REGEX = new Regex(@"\r\n?|\n", RegexOptions.Compiled);
-		static readonly string LINE_ENDING_REPLACEMENT = "\n";
+        public class Slicer : ISlicer
+        {
+                static readonly Regex LINE_ENDING_REGEX = new Regex(@"\r\n?|\n", RegexOptions.Compiled);
+                static readonly string LINE_ENDING_REPLACEMENT = "\n";
+                static readonly HashSet<string> BLOCK_ELEMENTS = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+                "address", "article", "aside", "blockquote", "canvas", "dd", "div", "dl", "dt",
+                "fieldset", "figcaption", "figure", "footer", "form", "h1", "h2", "h3", "h4",
+                "h5", "h6", "header", "hr", "li", "main", "nav", "noscript", "ol", "output",
+                "p", "pre", "section", "table", "tfoot", "ul", "video"
+        };
 
 		private SlicerOptions _options;
 		private readonly Tiktoken.Encoder _encoder;
@@ -170,17 +177,10 @@ namespace SemanticSlicer
 			}
 		}
 
-		private bool IsBlockElement(string name)
-		{
-			var blockElements = new HashSet<string>
-	{
-		"address", "article", "aside", "blockquote", "canvas", "dd", "div", "dl", "dt",
-		"fieldset", "figcaption", "figure", "footer", "form", "h1", "h2", "h3", "h4",
-		"h5", "h6", "header", "hr", "li", "main", "nav", "noscript", "ol", "output",
-		"p", "pre", "section", "table", "tfoot", "ul", "video"
-	};
-			return blockElements.Contains(name.ToLower());
-		}
+                private static bool IsBlockElement(string name)
+                {
+                        return BLOCK_ELEMENTS.Contains(name);
+                }
 
 
 		/// <summary>
