@@ -135,8 +135,15 @@ namespace SemanticSlicer
 				title += $"{LINE_ENDING_REPLACEMENT}{LINE_ENDING_REPLACEMENT}";
 			}
 
-			// remove any script and style tags from body
-			body.SelectNodes("//script|//style")?.ToList().ForEach(node => node.Remove());
+                        // remove any script and style tags from body
+                        var nodes = body.SelectNodes("//script|//style");
+                        if (nodes != null)
+                        {
+                                foreach (var node in nodes)
+                                {
+                                        node.Remove();
+                                }
+                        }
 
 			return $"{title}{GetInnerTextWithSpaces(body).Trim()}";
 		}
