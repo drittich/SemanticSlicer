@@ -16,6 +16,8 @@ GitHub: [https://github.com/drittich/SemanticSlicer](https://github.com/drittich
 
 - [Overview](#overview)
 - [Installation](#installation)
+- [CLI Usage](#cli-usage)
+- [Service Installation](#service-installation)
 - [Sample Usage](#sample-usage)
 - [Chunk Order](#chunk-order)
 - [Additional Metadata](#additional-metadata)
@@ -37,6 +39,102 @@ dotnet add package drittich.SemanticSlicer
 or from the Package Manager Console:
 ```ps
 NuGet\Install-Package drittich.SemanticSlicer
+```
+
+## CLI Usage
+
+Build the command-line tool:
+
+```bash
+dotnet publish SemanticSlicer.Cli/SemanticSlicer.Cli.csproj -c Release -o ./cli
+```
+
+### Run once
+
+Slice a file and output JSON chunk data:
+
+```bash
+dotnet ./cli/SemanticSlicer.Cli.dll MyDocument.txt
+```
+
+You can also pipe text in:
+
+```bash
+cat MyDocument.txt | dotnet ./cli/SemanticSlicer.Cli.dll
+```
+
+### Daemon mode
+
+Keep a slicer in memory and read lines from stdin (or a named pipe):
+
+```bash
+dotnet ./cli/SemanticSlicer.Cli.dll daemon
+```
+
+Optionally listen on a named pipe:
+
+```bash
+dotnet ./cli/SemanticSlicer.Cli.dll daemon --pipe slicerpipe
+```
+
+## Service Installation
+
+The repository includes a small Web API (`SemanticSlicer.Service`) that can be
+installed as a background service so the slicer stays in memory.
+
+First publish the service:
+
+```bash
+dotnet publish SemanticSlicer.Service/SemanticSlicer.Service.csproj -c Release -o ./publish
+```
+
+### Linux (systemd)
+
+1. Copy the `./publish` folder to `/opt/semanticslicer` (or a location of your choice).
+2. Create `/etc/systemd/system/semanticslicer.service` with:
+
+```ini
+[Unit]
+Description=Semantic Slicer Service
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/semanticslicer
+ExecStart=/usr/bin/dotnet /opt/semanticslicer/SemanticSlicer.Service.dll
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+```
+
+3. Enable and start the service:
+
+```bash
+sudo systemctl enable semanticslicer
+sudo systemctl start semanticslicer
+```
+
+### Windows
+
+1. Publish the service to a folder, e.g. `C:\SemanticSlicer`:
+
+```ps
+dotnet publish SemanticSlicer.Service/SemanticSlicer.Service.csproj -c Release -o C:\SemanticSlicer
+```
+
+2. From an elevated command prompt install and start the service:
+
+```cmd
+sc create SemanticSlicer binPath= "\"%ProgramFiles%\dotnet\dotnet.exe\" \"C:\\SemanticSlicer\\SemanticSlicer.Service.dll\""
+sc start SemanticSlicer
+```
+
+Once running you can POST text to the service:
+
+```bash
+curl -X POST http://localhost:5000/slice -H "Content-Type: application/json" \
+    -d '{"content":"Hello world"}'
 ```
 
 ## Sample Usage
