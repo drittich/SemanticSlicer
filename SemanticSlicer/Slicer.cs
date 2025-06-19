@@ -15,17 +15,17 @@ namespace SemanticSlicer
 	/// <summary>
 	/// A utility class for chunking and subdividing text content based on specified separators.
 	/// </summary>
-        public class Slicer : ISlicer
-        {
-                static readonly Regex LINE_ENDING_REGEX = new Regex(@"\r\n?|\n", RegexOptions.Compiled);
-                static readonly string LINE_ENDING_REPLACEMENT = "\n";
-                static readonly HashSet<string> BLOCK_ELEMENTS = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-        {
-                "address", "article", "aside", "blockquote", "canvas", "dd", "div", "dl", "dt",
-                "fieldset", "figcaption", "figure", "footer", "form", "h1", "h2", "h3", "h4",
-                "h5", "h6", "header", "hr", "li", "main", "nav", "noscript", "ol", "output",
-                "p", "pre", "section", "table", "tfoot", "ul", "video"
-        };
+	public class Slicer : ISlicer
+	{
+		static readonly Regex LINE_ENDING_REGEX = new Regex(@"\r\n?|\n", RegexOptions.Compiled);
+		static readonly string LINE_ENDING_REPLACEMENT = "\n";
+		static readonly HashSet<string> BLOCK_ELEMENTS = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+		{
+				"address", "article", "aside", "blockquote", "canvas", "dd", "div", "dl", "dt",
+				"fieldset", "figcaption", "figure", "footer", "form", "h1", "h2", "h3", "h4",
+				"h5", "h6", "header", "hr", "li", "main", "nav", "noscript", "ol", "output",
+				"p", "pre", "section", "table", "tfoot", "ul", "video"
+		};
 
 		private SlicerOptions _options;
 		private readonly Tiktoken.Encoder _encoder;
@@ -41,6 +41,12 @@ namespace SemanticSlicer
 
 		}
 
+		/// <summary>
+		/// Returns a Tiktoken.Encoder instance based on the specified encoding.
+		/// </summary>
+		/// <param name="encoding">The encoding type to use for the encoder.</param>
+		/// <returns>A Tiktoken.Encoder instance corresponding to the specified encoding.</returns>
+		/// <exception cref="ArgumentException">Thrown if the specified encoding is not supported.</exception>
 		private Tiktoken.Encoder GetEncoder(Encoding encoding)
 		{
 			switch (encoding)
@@ -53,7 +59,6 @@ namespace SemanticSlicer
 					throw new ArgumentException($"Encoding {encoding} is not supported.");
 			}
 		}
-
 
 		/// <summary>
 		/// Gets a list of document chunks for the given content.
@@ -101,15 +106,24 @@ namespace SemanticSlicer
 
 			var chunks = SplitDocumentChunks(documentChunks, massagedChunkHeader);
 
-                        for (int i = 0; i < chunks.Count; i++)
-                        {
-                                // Save the index with the chunk so they can be reassembled in the correct order
-                                chunks[i].Index = i;
-                        }
+			for (int i = 0; i < chunks.Count; i++)
+			{
+				// Save the index with the chunk so they can be reassembled in the correct order
+				chunks[i].Index = i;
+			}
 
 			return chunks;
 		}
 
+		/// <summary>
+		/// Removes all non-body content from the provided HTML string, including scripts and styles, and returns the plain text content.
+		/// If a &lt;title&gt; tag is present, its text is prepended to the result, separated by two line breaks.
+		/// If no &lt;body&gt; tag is found, all nodes are appended to a new body node before processing.
+		/// </summary>
+		/// <param name="content">The HTML content as a string.</param>
+		/// <returns>
+		/// A string containing the extracted title (if present) and the inner text of the body, with scripts and styles removed.
+		/// </returns>
 		public string RemoveNonBodyContent(string content)
 		{
 			var doc = new HtmlDocument();
@@ -135,19 +149,28 @@ namespace SemanticSlicer
 				title += $"{LINE_ENDING_REPLACEMENT}{LINE_ENDING_REPLACEMENT}";
 			}
 
-                        // remove any script and style tags from body
-                        var nodes = body.SelectNodes("//script|//style");
-                        if (nodes != null)
-                        {
-                                foreach (var node in nodes)
-                                {
-                                        node.Remove();
-                                }
-                        }
+			// remove any script and style tags from body
+			var nodes = body.SelectNodes("//script|//style");
+			if (nodes != null)
+			{
+				foreach (var node in nodes)
+				{
+					node.Remove();
+				}
+			}
 
 			return $"{title}{GetInnerTextWithSpaces(body).Trim()}";
 		}
 
+		/// <summary>
+		/// Recursively extracts the inner text from the specified <see cref="HtmlNode"/> and its children,
+		/// preserving spaces and line breaks for block elements.
+		/// </summary>
+		/// <param name="node">The root <see cref="HtmlNode"/> from which to extract text.</param>
+		/// <returns>
+		/// A <see cref="string"/> containing the concatenated inner text of the node and its descendants,
+		/// with appropriate spacing and line breaks for readability.
+		/// </returns>
 		private string GetInnerTextWithSpaces(HtmlNode node)
 		{
 			var sb = new StringBuilder();
@@ -155,12 +178,28 @@ namespace SemanticSlicer
 			return sb.ToString();
 		}
 
+		/// <summary>
+		/// Collapses excessive whitespace in the input string.
+		/// Ensures that no more than two consecutive line breaks or spaces appear in the result.
+		/// </summary>
+		/// <param name="input">The input string to process.</param>
+		/// <returns>
+		/// A string with no more than two consecutive line breaks or spaces.
+		/// </returns>
 		private string CollapseWhitespace(string input)
 		{
 			// don't allow more than 2 line breaks in a row or 2 spaces in a row
 			return Regex.Replace(input, @"(\r?\n){3,}|\s{3,}", "  ");
 		}
 
+		/// <summary>
+		/// Recursively processes the specified <see cref="HtmlNode"/> and its children,
+		/// appending their inner text to the provided <see cref="StringBuilder"/>.
+		/// For block elements, line breaks are inserted before and after their content
+		/// to preserve structure and readability.
+		/// </summary>
+		/// <param name="node">The root <see cref="HtmlNode"/> to process.</param>
+		/// <param name="sb">The <see cref="StringBuilder"/> to which the extracted text is appended.</param>
 		private void ProcessNode(HtmlNode node, StringBuilder sb)
 		{
 			foreach (var child in node.ChildNodes)
@@ -184,11 +223,17 @@ namespace SemanticSlicer
 			}
 		}
 
-                private static bool IsBlockElement(string name)
-                {
-                        return BLOCK_ELEMENTS.Contains(name);
-                }
-
+		/// <summary>
+		/// Determines whether the specified HTML element name is a block-level element.
+		/// </summary>
+		/// <param name="name">The name of the HTML element to check.</param>
+		/// <returns>
+		/// <c>true</c> if the specified element name is a block-level element; otherwise, <c>false</c>.
+		/// </returns>
+		private static bool IsBlockElement(string name)
+		{
+			return BLOCK_ELEMENTS.Contains(name);
+		}
 
 		/// <summary>
 		/// Extracts the inner text of the first <title> tag from the HTML content.
@@ -300,7 +345,23 @@ namespace SemanticSlicer
 			return firstHalfChunkPercentage < _options.MinChunkPercentage || secondHalfChunkPercentage < _options.MinChunkPercentage;
 		}
 
-		private Tuple<DocumentChunk, DocumentChunk> SplitChunkBySeparatorMatch(DocumentChunk documentChunk, string chunkHeader, Separator separator, Match? match)
+		/// <summary>
+		/// Splits a <see cref="DocumentChunk"/> into two chunks at the specified separator match.
+		/// </summary>
+		/// <param name="documentChunk">The original document chunk to split.</param>
+		/// <param name="chunkHeader">The header string to prepend to each resulting chunk for token counting.</param>
+		/// <param name="separator">The <see cref="Separator"/> used to determine the split location and behavior.</param>
+		/// <param name="match">The <see cref="Match"/> object representing the separator match in the content.</param>
+		/// <returns>
+		/// A <see cref="Tuple{T1, T2}"/> containing two <see cref="DocumentChunk"/> instances:
+		/// the first chunk contains the content before the separator, and the second contains the content after the separator.
+		/// Both chunks have their token counts calculated with the <paramref name="chunkHeader"/> prepended.
+		/// </returns>
+		private Tuple<DocumentChunk, DocumentChunk> SplitChunkBySeparatorMatch(
+			DocumentChunk documentChunk,
+			string chunkHeader,
+			Separator separator,
+			Match? match)
 		{
 			int matchIndex = match!.Index;
 			var splitContent = DoTextSplit(documentChunk.Content, matchIndex, match.Value, separator.Behavior);
