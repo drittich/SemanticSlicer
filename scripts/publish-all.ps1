@@ -84,3 +84,14 @@ foreach ($rid in $serviceRids) {
 }
 
 Write-Host "All builds complete. Zips are in ./artifacts"
+# NuGet pack/push (library)
+# Pack the SemanticSlicer library .nupkg and place it under ./artifacts/nuget
+$nugetOut = Join-Path $artifactsRoot "nuget"
+New-Item -ItemType Directory -Force -Path $nugetOut | Out-Null
+
+Write-Host "Packing NuGet for SemanticSlicer"
+dotnet pack "SemanticSlicer/SemanticSlicer.csproj" -c Release -o $nugetOut
+
+# Optional: push to NuGet (requires API key). Uncomment and set $env:NUGET_API_KEY
+# Write-Host "Pushing package to NuGet.org"
+# dotnet nuget push (Join-Path $nugetOut "*.nupkg") --source "https://api.nuget.org/v3/index.json" --api-key $env:NUGET_API_KEY
