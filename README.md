@@ -14,16 +14,23 @@ GitHub: [https://github.com/drittich/SemanticSlicer](https://github.com/drittich
 
 ## Table of Contents
 
-- [Overview](#overview)
-- [Installation](#installation)
-- [CLI Usage](#cli-usage)
-- [Service Installation](#service-installation)
-- [Sample Usage](#sample-usage)
-- [Chunk Order](#chunk-order)
-- [Additional Metadata](#additional-metadata)
-- [Adding Headers to Chunks](#adding-headers-to-chunks)
-- [License](#license)
-- [Contact](#contact)
+- [🧠✂️ SemanticSlicer](#️-semanticslicer)
+  - [Table of Contents](#table-of-contents)
+  - [Overview](#overview)
+  - [Installation](#installation)
+  - [Download \& Run (no build)](#download--run-no-build)
+  - [CLI Usage](#cli-usage)
+    - [Run once](#run-once)
+    - [Daemon mode](#daemon-mode)
+  - [Service Installation](#service-installation)
+    - [Linux (systemd)](#linux-systemd)
+    - [Windows](#windows)
+  - [Sample Usage](#sample-usage)
+  - [Chunk Order](#chunk-order)
+  - [Additional Metadata](#additional-metadata)
+  - [Adding Headers to Chunks](#adding-headers-to-chunks)
+  - [License](#license)
+  - [Contact](#contact)
 
 ## Overview
 
@@ -40,6 +47,67 @@ or from the Package Manager Console:
 ```ps
 NuGet\Install-Package drittich.SemanticSlicer
 ```
+
+## Download & Run (no build)
+
+Prebuilt binaries are published under GitHub Releases of this repository: https://github.com/drittich/SemanticSlicer/releases
+
+Choose the asset that matches your platform:
+- Windows x64: SemanticSlicer.Cli-win-x64.zip
+- macOS Intel: SemanticSlicer.Cli-osx-x64.zip
+- macOS Apple Silicon: SemanticSlicer.Cli-osx-arm64.zip
+- Linux x64: SemanticSlicer.Cli-linux-x64.zip
+
+After downloading:
+- Windows:
+  - Unzip the file.
+  - Open Command Prompt in the unzipped folder.
+  - Language: cmd
+    Command:
+    SemanticSlicer.Cli.exe MyDocument.txt
+  - Or pipe input:
+    Language: cmd
+    Command:
+    type MyDocument.txt | SemanticSlicer.Cli.exe
+
+- macOS:
+  - Unzip the file.
+  - In Terminal, mark the binary executable if needed and run:
+    - Intel:
+      - Language: bash
+        Command:
+        chmod +x SemanticSlicer.Cli && ./SemanticSlicer.Cli MyDocument.txt
+    - Apple Silicon:
+      - Language: bash
+        Command:
+        chmod +x SemanticSlicer.Cli && ./SemanticSlicer.Cli MyDocument.txt
+  - Pipe input:
+    - Language: bash
+      Command:
+      cat MyDocument.txt | ./SemanticSlicer.Cli
+
+- Linux:
+  - Unzip the file.
+  - Language: bash
+    Command:
+    chmod +x SemanticSlicer.Cli && ./SemanticSlicer.Cli MyDocument.txt
+  - Pipe input:
+    - Language: bash
+      Command:
+      cat MyDocument.txt | ./SemanticSlicer.Cli
+
+Daemon mode (keeps slicer in memory):
+- Language: bash
+  Command:
+  ./SemanticSlicer.Cli daemon
+- Named pipe (Linux/macOS):
+  - Language: bash
+    Command:
+    ./SemanticSlicer.Cli daemon --pipe slicerpipe
+
+Notes:
+- These builds are self-contained; the .NET runtime is not required.
+- If your OS flags the binary (macOS Gatekeeper), you may need to allow it in System Settings → Privacy & Security.
 
 ## CLI Usage
 
