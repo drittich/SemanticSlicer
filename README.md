@@ -7,7 +7,7 @@
 
 Smart, recursive text slicing for LLM-ready documents.
 
-**SemanticSlicer** is a lightweight C# application that **recursively splits text** into meaningful chunks—preserving semantic boundaries (sentences, headings, HTML tags) and ideal for **embedding generation** (OpenAI, Azure OpenAI, LangChain, etc.).
+**SemanticSlicer** is a lightweight C# application that **recursively splits text** into meaningful chunks—preserving semantic boundaries (sentences, headings, HTML tags) and ideal for **embedding generation** (OpenAI, Azure OpenAI, LangChain, etc.). You can run it on MaxOs, Linux, or Windows and it can run from the command line, as a daemon, as service or as a REST API. You can also directly use the library by referencing the Nuget package in your code.
 
 
 GitHub: [https://github.com/drittich/SemanticSlicer](https://github.com/drittich/SemanticSlicer)
@@ -17,7 +17,7 @@ GitHub: [https://github.com/drittich/SemanticSlicer](https://github.com/drittich
 - [🧠✂️ SemanticSlicer](#️-semanticslicer)
   - [Table of Contents](#table-of-contents)
   - [Overview](#overview)
-  - [Installation](#installation)
+  - [Nuget Installation](#nuget-installation)
   - [Download \& Run (no build)](#download--run-no-build)
   - [CLI Usage](#cli-usage)
     - [Run once](#run-once)
@@ -36,7 +36,7 @@ GitHub: [https://github.com/drittich/SemanticSlicer](https://github.com/drittich
 
 This library accepts text and will break it into smaller chunks, typically useful for when creating [LLM AI embeddings](https://learn.microsoft.com/en-us/semantic-kernel/memories/embeddings).
 
-## Installation
+## Nuget Installation
 
 The package name is `drittich.SemanticSlicer`. You can install this from Nuget via the command line:
 ```ps
