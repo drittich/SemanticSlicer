@@ -14,10 +14,10 @@
 		<RepositoryType>git</RepositoryType>
 		<PackageTags>ai,openai,gpt,llm,langchain,embeddings</PackageTags>
 		<PackageReleaseNotes>
-			- Runs as CLI tool/daemon, service or REST endpoint on Mac/Linux/Windows
+			- Adds optional chunk overlap parameter to improve context retention between chunks.
 		</PackageReleaseNotes>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
-		<Version>1.5.0</Version>
+		<Version>1.6.0</Version>
 	</PropertyGroup>
 
 	<ItemGroup>
