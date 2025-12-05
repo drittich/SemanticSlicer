@@ -7,7 +7,7 @@
 
 Smart, recursive text slicing for LLM-ready documents.
 
-**SemanticSlicer** is a lightweight C# application that **recursively splits text** into meaningful chunks—preserving semantic boundaries (sentences, headings, HTML tags) and ideal for **embedding generation** (OpenAI, Azure OpenAI, LangChain, etc.). You can run it on MaxOs, Linux, or Windows and it can run from the command line, as a daemon, as service or as a REST API. You can also directly use the library by referencing the Nuget package in your code.
+**SemanticSlicer** is a lightweight C# application that **recursively splits text** into meaningful chunks—preserving semantic boundaries (sentences, headings, HTML tags) and ideal for **embedding generation** (OpenAI, Azure OpenAI, LangChain, etc.). You can run it on MacOs, Linux, or Windows and it can run from the command line, as a daemon, as service or as a REST API. You can also directly use the library by referencing the Nuget package in your code.
 
 
 GitHub: [https://github.com/drittich/SemanticSlicer](https://github.com/drittich/SemanticSlicer)
