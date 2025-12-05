@@ -122,27 +122,29 @@ dotnet publish SemanticSlicer.Cli/SemanticSlicer.Cli.csproj -c Release -o ./cli
 Slice a file and output JSON chunk data:
 
 ```bash
-dotnet ./cli/SemanticSlicer.Cli.dll MyDocument.txt
+dotnet ./cli/SemanticSlicer.Cli.dll --overlap 30 MyDocument.txt
 ```
 
-You can also pipe text in:
+You can also pipe text in (omit the overlap flag to use the default 0%):
 
 ```bash
-cat MyDocument.txt | dotnet ./cli/SemanticSlicer.Cli.dll
+cat MyDocument.txt | dotnet ./cli/SemanticSlicer.Cli.dll --overlap 20
 ```
+
+Use the `--overlap` flag (0-100) to carry forward that percentage of the previous chunk's tokens, respecting your configured max chunk size.
 
 ### Daemon mode
 
 Keep a slicer in memory and read lines from stdin (or a named pipe):
 
 ```bash
-dotnet ./cli/SemanticSlicer.Cli.dll daemon
+dotnet ./cli/SemanticSlicer.Cli.dll daemon --overlap 25
 ```
 
 Optionally listen on a named pipe:
 
 ```bash
-dotnet ./cli/SemanticSlicer.Cli.dll daemon --pipe slicerpipe
+dotnet ./cli/SemanticSlicer.Cli.dll daemon --pipe slicerpipe --overlap 25
 ```
 
 ## Service Installation
@@ -202,8 +204,10 @@ Once running you can POST text to the service:
 
 ```bash
 curl -X POST http://localhost:5000/slice -H "Content-Type: application/json" \
-    -d '{"content":"Hello world"}'
+    -d '{"content":"Hello world","overlapPercentage":30}'
 ```
+
+`overlapPercentage` is optional (defaults to 0) and clamped between 0 and 100. Header tokens also count toward the overlap budget.
 
 ## Sample Usage
 
@@ -224,6 +228,15 @@ Markdown document:
 var options = new SlicerOptions { MaxChunkTokenCount = 600, Separators = Separators.Markdown };
 var slicer = new Slicer(options);
 var text = File.ReadAllText("MyDocument.md");
+var documentChunks = slicer.GetDocumentChunks(text);
+```
+
+Overlapping chunks:
+
+```cs
+// Reuse the last 30% of the previous chunk (by tokens), while still respecting the max size
+var options = new SlicerOptions { MaxChunkTokenCount = 800, OverlapPercentage = 30 };
+var slicer = new Slicer(options);
 var documentChunks = slicer.GetDocumentChunks(text);
 ```
 
@@ -254,7 +267,7 @@ You can pass in your own list if of separators if you wish, e.g., if you wish to
 
 ## Chunk Order
 
-Chunks will be returned in the order they were found in the document, and contain an Index property you can use to put them back in order if necessary.
+Chunks will be returned in the order they were found in the document, and contain an Index property you can use to put them back in order if necessary. Each chunk also includes `StartOffset` and `EndOffset` character positions relative to the normalized input text so you can align slices back to the source if needed.
 
 ## Additional Metadata
 
@@ -283,6 +296,8 @@ var text = File.ReadAllText(fileName);
 var header = $"FileName: {fileName}";
 var documentChunks = slicer.GetDocumentChunks(text, null, header);
 ```
+
+Note: Headers count against `MaxChunkTokenCount` and reduce the available overlap when `OverlapPercentage` is non-zero.
 
 ## License
 

@@ -1,4 +1,5 @@
-﻿using SemanticSlicer.Models;
+using System;
+using SemanticSlicer.Models;
 
 namespace SemanticSlicer
 {
@@ -31,5 +32,17 @@ namespace SemanticSlicer
 		/// Gets or sets a value indicating whether to strip HTML tags from the input text before chunking. Default is false.
 		/// </summary>
 		public bool StripHtml { get; set; }
+
+		private int _overlapPercentage;
+
+		/// <summary>
+		/// Gets or sets the overlap percentage (0-100) to reuse tokens from the previous chunk.
+		/// </summary>
+		public int OverlapPercentage
+		{
+			get => _overlapPercentage;
+			set => _overlapPercentage = Math.Clamp(value, 0, 100);
+		}
 	}
 }
+

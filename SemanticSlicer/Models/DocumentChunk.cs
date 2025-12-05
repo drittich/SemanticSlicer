@@ -20,5 +20,15 @@ namespace SemanticSlicer.Models
 		/// Gets or sets the number of tokens in the document chunk.
 		/// </summary>
 		public int TokenCount { get; set; }
+
+		/// <summary>
+		/// Gets or sets the start offset (inclusive) of the chunk within the source text.
+		/// </summary>
+		public int StartOffset { get; set; }
+
+		/// <summary>
+		/// Gets or sets the end offset (exclusive) of the chunk within the source text.
+		/// </summary>
+		public int EndOffset { get; set; }
 	}
 }

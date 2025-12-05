@@ -69,6 +69,8 @@ namespace SemanticSlicer
 		/// <returns>Returns a list of DocumentChunks after performing a series of actions including normalization, token counting, splitting, indexing, and removing HTML tags, etc.</returns>
 		public List<DocumentChunk> GetDocumentChunks(string content, Dictionary<string, object?>? metadata = null, string chunkHeader = "")
 		{
+			_options.OverlapPercentage = Math.Clamp(_options.OverlapPercentage, 0, 100);
+
 			var massagedChunkHeader = chunkHeader;
 			if (!string.IsNullOrWhiteSpace(chunkHeader))
 			{
@@ -100,11 +102,15 @@ namespace SemanticSlicer
 				new DocumentChunk {
 					Content = massagedContent,
 					Metadata = metadata,
-					TokenCount = effectiveTokenCount
+					TokenCount = effectiveTokenCount,
+					StartOffset = 0,
+					EndOffset = massagedContent.Length
 				}
 			};
 
 			var chunks = SplitDocumentChunks(documentChunks, massagedChunkHeader);
+
+			ApplyOverlap(chunks, massagedChunkHeader, massagedContent);
 
 			for (int i = 0; i < chunks.Count; i++)
 			{
@@ -113,6 +119,84 @@ namespace SemanticSlicer
 			}
 
 			return chunks;
+		}
+
+		private void ApplyOverlap(List<DocumentChunk> chunks, string chunkHeader, string sourceContent)
+		{
+			if (_options.OverlapPercentage <= 0 || chunks.Count < 2)
+			{
+				return;
+			}
+
+			for (int i = 0; i < chunks.Count - 1; i++)
+			{
+				var previous = chunks[i];
+				var current = chunks[i + 1];
+
+				int requestedOverlapTokens = (int)Math.Floor(previous.TokenCount * _options.OverlapPercentage / 100.0);
+				if (requestedOverlapTokens <= 0 || current.EndOffset <= current.StartOffset)
+				{
+					continue;
+				}
+
+				var baseContentSlice = GetContentSlice(sourceContent, current.StartOffset, current.EndOffset);
+				int baseTokenCount = _encoder.CountTokens($"{chunkHeader}{baseContentSlice}");
+				current.TokenCount = baseTokenCount;
+				var baseChunkContent = $"{chunkHeader}{baseContentSlice}";
+
+				int allowedAdditionalTokens = Math.Max(_options.MaxChunkTokenCount - baseTokenCount, 0);
+				if (allowedAdditionalTokens <= 0)
+				{
+					current.Content = baseChunkContent;
+					continue;
+				}
+
+				int targetAdditionalTokens = Math.Min(requestedOverlapTokens, allowedAdditionalTokens);
+
+				int minStart = Math.Max(previous.StartOffset, 0);
+				int maxStart = current.StartOffset;
+
+				if (minStart >= maxStart)
+				{
+					continue;
+				}
+
+				int targetTokenCeiling = Math.Min(_options.MaxChunkTokenCount, baseTokenCount + targetAdditionalTokens);
+				int bestStart = maxStart;
+				int bestTokenCount = baseTokenCount;
+
+				int low = minStart;
+				int high = maxStart;
+
+				while (low <= high)
+				{
+					int mid = (low + high) / 2;
+					var overlappedContent = GetContentSlice(sourceContent, mid, current.EndOffset);
+					int tokenCount = _encoder.CountTokens($"{chunkHeader}{overlappedContent}");
+
+					if (tokenCount <= targetTokenCeiling)
+					{
+						bestStart = mid;
+						bestTokenCount = tokenCount;
+						high = mid - 1;
+					}
+					else
+					{
+						low = mid + 1;
+					}
+				}
+
+				if (bestStart == maxStart)
+				{
+					current.Content = baseChunkContent;
+					continue;
+				}
+
+				var overlappedSlice = GetContentSlice(sourceContent, bestStart, current.EndOffset);
+				current.StartOffset = bestStart;
+				current.Content = $"{chunkHeader}{overlappedSlice}";
+				current.TokenCount = bestTokenCount;
+			}
 		}
 
 		/// <summary>
@@ -377,17 +461,45 @@ namespace SemanticSlicer
 				{
 					Content = firstHalfContent,
 					Metadata = documentChunk.Metadata,
-					TokenCount = firstHalfEffectiveTokenCount
+					TokenCount = firstHalfEffectiveTokenCount,
+					StartOffset = documentChunk.StartOffset,
+					EndOffset = GetFirstEndOffset(documentChunk, matchIndex, match.Value.Length, separator.Behavior)
 				},
 				new DocumentChunk
 				{
 					Content = secondHalfContent,
 					Metadata = documentChunk.Metadata,
-					TokenCount = secondHalfEffectiveTokenCount
+					TokenCount = secondHalfEffectiveTokenCount,
+					StartOffset = GetSecondStartOffset(documentChunk, matchIndex, match.Value.Length, separator.Behavior),
+					EndOffset = documentChunk.EndOffset
 				}
 			);
 
 			return ret;
+		}
+
+		private static int GetFirstEndOffset(DocumentChunk parentChunk, int matchIndex, int matchLength, SeparatorBehavior behavior)
+		{
+			int absoluteMatchIndex = parentChunk.StartOffset + matchIndex;
+
+			if (behavior == SeparatorBehavior.Suffix)
+			{
+				return absoluteMatchIndex + matchLength;
+			}
+
+			return absoluteMatchIndex;
+		}
+
+		private static int GetSecondStartOffset(DocumentChunk parentChunk, int matchIndex, int matchLength, SeparatorBehavior behavior)
+		{
+			int absoluteMatchIndex = parentChunk.StartOffset + matchIndex;
+
+			if (behavior == SeparatorBehavior.Suffix || behavior == SeparatorBehavior.Remove)
+			{
+				return absoluteMatchIndex + matchLength;
+			}
+
+			return absoluteMatchIndex;
 		}
 
 		/// <summary>
@@ -415,6 +527,19 @@ namespace SemanticSlicer
 			}
 
 			return centermostMatch;
+		}
+
+		private static string GetContentSlice(string sourceContent, int startOffset, int endOffset)
+		{
+			int safeStart = Math.Clamp(startOffset, 0, sourceContent.Length);
+			int safeEnd = Math.Clamp(endOffset, 0, sourceContent.Length);
+
+			if (safeEnd < safeStart)
+			{
+				return string.Empty;
+			}
+
+			return sourceContent[safeStart..safeEnd];
 		}
 
 		/// <summary>
