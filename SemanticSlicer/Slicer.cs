@@ -7,7 +7,7 @@ using System.Text.RegularExpressions;
 using HtmlAgilityPack;
 
 using SemanticSlicer.Models;
-
+using SemanticSlicer.Services.Encoders;
 using Tiktoken.Encodings;
 
 namespace SemanticSlicer
@@ -28,7 +28,7 @@ namespace SemanticSlicer
 		};
 
 		private SlicerOptions _options;
-		private readonly Tiktoken.Encoder _encoder;
+		private readonly IEncoder _encoder;
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="Slicer"/> class with optional SemanticSlicer options.
@@ -47,14 +47,20 @@ namespace SemanticSlicer
 		/// <param name="encoding">The encoding type to use for the encoder.</param>
 		/// <returns>A Tiktoken.Encoder instance corresponding to the specified encoding.</returns>
 		/// <exception cref="ArgumentException">Thrown if the specified encoding is not supported.</exception>
-		private Tiktoken.Encoder GetEncoder(Encoding encoding)
+		private IEncoder GetEncoder(Encoding encoding)
 		{
 			switch (encoding)
 			{
 				case Encoding.O200K:
-					return new Tiktoken.Encoder(new O200KBase());
+					return new TikTokEncoder(new O200KBase());
 				case Encoding.Cl100K:
-					return new Tiktoken.Encoder(new Cl100KBase());
+					return new TikTokEncoder(new Cl100KBase());
+				case Encoding.Custom:
+					{
+						if (_options.CustomEncoder == null)
+							throw new ArgumentException($"CustomEncoder was not set in the options.");
+						return _options.CustomEncoder;
+					}
 				default:
 					throw new ArgumentException($"Encoding {encoding} is not supported.");
 			}

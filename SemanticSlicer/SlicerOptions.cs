@@ -1,5 +1,6 @@
 using System;
 using SemanticSlicer.Models;
+using SemanticSlicer.Services.Encoders;
 
 namespace SemanticSlicer
 {
@@ -18,10 +19,15 @@ namespace SemanticSlicer
 		/// </summary>
 		public int MinChunkPercentage { get; set; } = 10;
 
+    /// <summary>
+    /// Gets or sets the encoding used for semantic processing. Default is "cl100k_base".
+    /// </summary>
+    public Encoding Encoding { get; set; } = Encoding.Cl100K;
+
 		/// <summary>
-		/// Gets or sets the encoding used for semantic processing. Default is "cl100k_base".
+		/// 
 		/// </summary>
-		public Encoding Encoding { get; set; } = Encoding.Cl100K;
+		public IEncoder CustomEncoder { get; set; }
 
 		/// <summary>
 		/// Gets or sets the separators used for splitting documents. Default is Separators.Text.
