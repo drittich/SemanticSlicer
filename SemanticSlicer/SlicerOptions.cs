@@ -25,7 +25,7 @@ namespace SemanticSlicer
 		public Encoding Encoding { get; set; } = Encoding.Cl100K;
 
 		/// <summary>
-		/// 
+		/// Gets or sets the custom encoder implementation. Required when <see cref="Encoding"/> is set to <c>Encoding.Custom</c>. Can be null for other encoding types.
 		/// </summary>
 		public IEncoder CustomEncoder { get; set; }
 
