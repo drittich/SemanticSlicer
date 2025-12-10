@@ -7,9 +7,9 @@
 	{
 		Cl100K,
 		O200K,
-    /// <summary>
-    /// Use custom implementation of IEncoder
-    /// </summary>
-    Custom
+		/// <summary>
+		/// Use custom implementation of IEncoder
+		/// </summary>
+		Custom
   }
 }
