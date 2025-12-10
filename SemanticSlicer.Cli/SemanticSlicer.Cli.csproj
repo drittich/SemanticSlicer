@@ -6,7 +6,7 @@
 		<Nullable>enable</Nullable>
 		<PublishSingleFile>true</PublishSingleFile>
 		<SelfContained>true</SelfContained>
-		<Version>1.5.0</Version>
+		<Version>1.7.0</Version>
 	</PropertyGroup>
 	<ItemGroup>
 		<ProjectReference Include="..\SemanticSlicer\SemanticSlicer.csproj" />
