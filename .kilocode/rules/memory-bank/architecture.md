@@ -74,6 +74,7 @@ Sequence for GetDocumentChunks:
 - Centermost-aware splitting to maintain semantic locality [SemanticSlicer.Slicer.GetCentermostMatch()](SemanticSlicer/Slicer.cs:399).
 - Separator behavior types to control boundary inclusion [SemanticSlicer.SeparatorBehavior](SemanticSlicer/SeparatorBehavior.cs:1).
 - MinChunkPercentage to avoid pathological tiny chunks [SemanticSlicer.Slicer.IsSplitBelowThreshold()](SemanticSlicer/Slicer.cs:333).
+- OverlapPercentage (0–100) is clamped; header tokens reduce overlap budget so MaxChunkTokenCount is always respected [SemanticSlicer.SlicerOptions](SemanticSlicer/SlicerOptions.cs:8).
 - Optional HTML stripping focuses on inner text and removes scripts/styles, prepends title when present [SemanticSlicer.Slicer.RemoveNonBodyContent()](SemanticSlicer/Slicer.cs:127).
 
 ## Interactions

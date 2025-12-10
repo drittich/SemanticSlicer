@@ -10,14 +10,18 @@
 - Captured technologies, dependencies, build/publish steps [memory-bank/tech.md](.kilocode/rules/memory-bank/tech.md).
 
 ## Next Steps
-- Create repeatable task entries for publishing CLI/service and using NuGet [memory-bank/tasks.md](.kilocode/rules/memory-bank/tasks.md).
-- Validate Memory Bank alignment against [README.md](README.md) and correct any discrepancies.
-- Request verification of product and architecture documents from the maintainer.
+- Create repeatable task entries for publishing CLI/service and using NuGet, including CLI `--overlap` and Service `overlapPercentage` examples [memory-bank/tasks.md](.kilocode/rules/memory-bank/tasks.md).
+- Validate Memory Bank alignment against [README.md](README.md), specifically:
+  - CLI overlap flags in Run once [README.md](README.md:125) and Daemon mode [README.md](README.md:141)
+  - Service POST with `overlapPercentage` [README.md](README.md:206)
+  - Offsets and metadata sections [README.md](README.md:270), [README.md](README.md:273)
+- Request maintainer verification of updated product, architecture, tech, and tasks documents.
 
 ## Assumptions
 - .NET 8 tooling; core library targets netstandard2.1 [SemanticSlicer.SemanticSlicer.csproj](SemanticSlicer/SemanticSlicer.csproj:1).
 - Token counting via Tiktoken encoders [SemanticSlicer.Slicer.GetEncoder()](SemanticSlicer/Slicer.cs:50).
 - Defaults: MaxChunkTokenCount=1000, MinChunkPercentage=10, Encoding=Cl100K, Separators=Text [SemanticSlicer.SlicerOptions](SemanticSlicer/SlicerOptions.cs:13).
+- OverlapPercentage is clamped to $[0,100]$; header tokens reduce overlap budget and $TokenCount \leq MaxChunkTokenCount$ is always enforced [SemanticSlicer.SlicerOptions](SemanticSlicer/SlicerOptions.cs:8).
 
 ## Risks
 - Separator regex ordering impacts split quality [SemanticSlicer.Separators](SemanticSlicer/Separators.cs:10).

@@ -20,9 +20,11 @@ References:
 - Token counting is performed using tiktoken encoders $cl100k\_base$ and $o200k$ [SemanticSlicer.Slicer.GetEncoder()](SemanticSlicer/Slicer.cs:50).
 - Recursive splitting uses centermost-aware matching across configured separators [SemanticSlicer.Slicer.SplitDocumentChunks()](SemanticSlicer/Slicer.cs:275).
 - Ensures chunk size $\\leq$ MaxChunkTokenCount and safeguards with MinChunkPercentage [SemanticSlicer.Slicer.IsSplitBelowThreshold()](SemanticSlicer/Slicer.cs:333).
+- Supports overlapping chunks via an $OverlapPercentage$ (0–100) carry-forward of previous chunk tokens, clamped and budgeted alongside header tokens [SemanticSlicer.SlicerOptions](SemanticSlicer/SlicerOptions.cs:8); CLI flag `--overlap` and service field `overlapPercentage` align with this behavior [SemanticSlicer.Cli.Program](SemanticSlicer.Cli/Program.cs:1) [SemanticSlicer.Service/Models/SliceRequest](SemanticSlicer.Service/Models/SliceRequest.cs:1).
 - Stable ordering with Index assigned per chunk for reassembly [SemanticSlicer.Slicer.GetDocumentChunks()](SemanticSlicer/Slicer.cs:109).
+- Each chunk includes $StartOffset$ and $EndOffset$ character positions relative to normalized input for source alignment [SemanticSlicer.Models.DocumentChunk](SemanticSlicer/Models/DocumentChunk.cs:1).
 - Optional metadata dictionary is preserved on each chunk [SemanticSlicer.Slicer.GetDocumentChunks()](SemanticSlicer/Slicer.cs:100).
-- Optional per-chunk header is prepended to content and accounted for in tokens [SemanticSlicer.Slicer.GetDocumentChunks()](SemanticSlicer/Slicer.cs:72).
+- Optional per-chunk header is prepended to content and accounted for in tokens; headers also reduce available overlap budget [SemanticSlicer.Slicer.GetDocumentChunks()](SemanticSlicer/Slicer.cs:72).
 
 ## Usage modes
 - Library (NuGet): `drittich.SemanticSlicer` for direct integration in .NET apps [SemanticSlicer.Slicer()](SemanticSlicer/Slicer.cs:37).

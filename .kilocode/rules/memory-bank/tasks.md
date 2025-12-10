@@ -12,22 +12,24 @@
    - Language: bash
    - Command:
    - dotnet publish SemanticSlicer.Cli/SemanticSlicer.Cli.csproj -c Release -o ./cli
+   - Note: You can use the `--self-contained` and `-r <RID>` options for platform-specific binaries if needed.
 2. Run once:
    - Language: bash
    - Command:
-   - dotnet ./cli/SemanticSlicer.Cli.dll MyDocument.txt
+   - dotnet ./cli/SemanticSlicer.Cli.dll --overlap 30 MyDocument.txt
+   - Explanation: `--overlap` carries forward a percentage (0–100) of previous chunk tokens while respecting MaxChunkTokenCount.
 3. Pipe input:
    - Language: bash
    - Command:
-   - cat MyDocument.txt | dotnet ./cli/SemanticSlicer.Cli.dll
+   - cat MyDocument.txt | dotnet ./cli/SemanticSlicer.Cli.dll --overlap 20
 4. Daemon:
    - Language: bash
    - Command:
-   - dotnet ./cli/SemanticSlicer.Cli.dll daemon
+   - dotnet ./cli/SemanticSlicer.Cli.dll daemon --overlap 25
 5. Daemon with named pipe (Unix):
    - Language: bash
    - Command:
-   - dotnet ./cli/SemanticSlicer.Cli.dll daemon --pipe slicerpipe
+   - dotnet ./cli/SemanticSlicer.Cli.dll daemon --pipe slicerpipe --overlap 25
 
 **Notes:**
 - Prebuilt binaries are available in Releases [README.md](README.md:52).
@@ -74,7 +76,8 @@
 5. Test endpoint:
    - Language: bash
    - Command:
-   - curl -X POST http://localhost:5000/slice -H "Content-Type: application/json" -d '{"content":"Hello world"}'
+   - curl -X POST http://localhost:5000/slice -H "Content-Type: application/json" -d '{"content":"Hello world","overlapPercentage":30}'
+   - Note: `overlapPercentage` is optional (0–100) and header tokens reduce the available overlap budget.
 
 ## Use Library via NuGet
 **Goal:** Integrate the library directly into a .NET app.
