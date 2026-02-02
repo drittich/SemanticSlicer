@@ -305,5 +305,258 @@ namespace SemanticSlicer.Tests
 				Assert.Equal(expectedContent, chunk.Content);
 			}
 		}
-			     }
+
+		[Fact]
+		public void SplitDocumentChunksRaw_DoesNotNormalizeLineEndings()
+		{
+			// Arrange
+			var slicer = new Slicer();
+			string input = "First line\r\nSecond line\nThird line\rFourth line";
+
+			// Act
+			var result = slicer.SplitDocumentChunksRaw(input);
+
+			// Assert - line endings should be preserved exactly as provided
+			Assert.Single(result);
+			Assert.Equal(input, result[0].Content); // No normalization
+		}
+
+		[Fact]
+		public void SplitDocumentChunksRaw_DoesNotTrimContent()
+		{
+			// Arrange
+			var slicer = new Slicer();
+			string input = "  Content with leading and trailing spaces  ";
+
+			// Act
+			var result = slicer.SplitDocumentChunksRaw(input);
+
+			// Assert - content should be preserved exactly as provided (no trimming)
+			Assert.Single(result);
+			Assert.Equal(input, result[0].Content);
+		}
+
+		[Fact]
+		public void SplitDocumentChunksRaw_DoesNotStripHtmlEvenWhenConfigured()
+		{
+			// Arrange
+			var options = new SlicerOptions { StripHtml = true, Separators = Separators.Html };
+			var slicer = new Slicer(options);
+			string input = "Some <b>HTML</b> content";
+
+			// Act
+			var result = slicer.SplitDocumentChunksRaw(input);
+
+			// Assert - HTML tags should be preserved even though StripHtml is true
+			Assert.Single(result);
+			Assert.Equal(input, result[0].Content);
+		}
+
+		[Fact]
+		public void SplitDocumentChunksRaw_DoesNotCollapseWhitespace()
+		{
+			// Arrange
+			var slicer = new Slicer();
+			string input = "Line one.\n\n\n\nLine two."; // Four newlines
+
+			// Act
+			var result = slicer.SplitDocumentChunksRaw(input);
+
+			// Assert - whitespace should be preserved exactly
+			Assert.Single(result);
+			Assert.Equal(input, result[0].Content);
+		}
+
+		[Fact]
+		public void SplitDocumentChunksRaw_OffsetsRelativeToRawInput()
+		{
+			// Arrange
+			var options = new SlicerOptions { MaxChunkTokenCount = 50 };
+			var slicer = new Slicer(options);
+			string input = @"In the heart of an enchanting forest, kissed by the golden rays of the sun, stood a charming little cottage. The whitewashed wooden walls, thatched roof, and cobblestone path leading to the doorstep were blanketed in hues of vivid green by the elegant garlands of crawling ivy.";
+
+			// Act
+			var chunks = slicer.SplitDocumentChunksRaw(input);
+
+			// Assert - all offsets should reference positions in the raw input
+			Assert.True(chunks.Count > 1, "Expected multiple chunks for this test.");
+			foreach (var chunk in chunks)
+			{
+				Assert.True(chunk.StartOffset >= 0);
+				Assert.True(chunk.EndOffset <= input.Length);
+				Assert.True(chunk.StartOffset < chunk.EndOffset);
+				
+				// Verify the chunk content matches the slice from raw input (chunks may be trimmed)
+				var expectedContent = input.Substring(chunk.StartOffset, chunk.EndOffset - chunk.StartOffset).Trim();
+				Assert.Equal(expectedContent, chunk.Content);
+			}
+		}
+
+		[Fact]
+		public void SplitDocumentChunksRaw_RespectsTokenLimits()
+		{
+			// Arrange
+			var options = new SlicerOptions { MaxChunkTokenCount = 50 };
+			var slicer = new Slicer(options);
+			string input = @"In the heart of an enchanting forest, kissed by the golden rays of the sun, stood a charming little cottage. The whitewashed wooden walls, thatched roof, and cobblestone path leading to the doorstep were blanketed in hues of vivid green by the elegant garlands of crawling ivy. Vivid flowers in bloom surrounded it, exhaling a perfume that pervaded the air, mingling with the earthy aroma of the forest.";
+
+			// Act
+			var result = slicer.SplitDocumentChunksRaw(input);
+
+			// Assert
+			Assert.True(result.Count > 1, "Expected multiple chunks.");
+			Assert.All(result, chunk => Assert.True(chunk.TokenCount <= options.MaxChunkTokenCount));
+		}
+
+		[Fact]
+		public void SplitDocumentChunksRaw_AssignsSequentialIndexes()
+		{
+			// Arrange
+			var options = new SlicerOptions { MaxChunkTokenCount = 50 };
+			var slicer = new Slicer(options);
+			string input = @"In the heart of an enchanting forest, kissed by the golden rays of the sun, stood a charming little cottage. The whitewashed wooden walls, thatched roof, and cobblestone path leading to the doorstep were blanketed in hues of vivid green by the elegant garlands of crawling ivy. Vivid flowers in bloom surrounded it, exhaling a perfume that pervaded the air, mingling with the earthy aroma of the forest.";
+
+			// Act
+			var result = slicer.SplitDocumentChunksRaw(input);
+
+			// Assert
+			Assert.True(result.Count > 1, "Expected multiple chunks.");
+			for (int i = 0; i < result.Count; i++)
+			{
+				Assert.Equal(i, result[i].Index);
+			}
+		}
+
+		[Fact]
+		public void SplitDocumentChunksRaw_PreservesMetadata()
+		{
+			// Arrange
+			var slicer = new Slicer();
+			string input = "Some content";
+			var metadata = new Dictionary<string, object?> { { "Id", 123 }, { "Title", "Test" } };
+
+			// Act
+			var result = slicer.SplitDocumentChunksRaw(input, metadata);
+
+			// Assert
+			Assert.Single(result);
+			Assert.Equal(metadata["Id"], result[0].Metadata!["Id"]);
+			Assert.Equal(metadata["Title"], result[0].Metadata!["Title"]);
+		}
+
+		[Fact]
+		public void SplitDocumentChunksRaw_PrependsChunkHeader()
+		{
+			// Arrange
+			var slicer = new Slicer();
+			string input = "Some content";
+			string header = "Title: Test";
+
+			// Act
+			var result = slicer.SplitDocumentChunksRaw(input, null, header);
+
+			// Assert
+			Assert.Single(result);
+			Assert.Equal("Title: Test\nSome content", result[0].Content);
+		}
+
+		[Fact]
+		public void SplitDocumentChunksRaw_AppliesOverlapWithinMaxTokenLimit()
+		{
+			// Arrange
+			var baselineOptions = new SlicerOptions { MaxChunkTokenCount = 120, OverlapPercentage = 0 };
+			var overlapOptions = new SlicerOptions { MaxChunkTokenCount = 120, OverlapPercentage = 50 };
+			string input = @"In the heart of an enchanting forest, kissed by the golden rays of the sun, stood a charming little cottage. The whitewashed wooden walls, thatched roof, and cobblestone path leading to the doorstep were blanketed in hues of vivid green by the elegant garlands of crawling ivy. Vivid flowers in bloom surrounded it, exhaling a perfume that pervaded the air, mingling with the earthy aroma of the forest. Every morning, the cottage awoke to the harmonious symphony of chirping birds, and every night, it fell asleep under the soft, lullaby-like rustling of leaves, rocked by the gentle wind.";
+
+			// Act
+			var baseline = new Slicer(baselineOptions).SplitDocumentChunksRaw(input);
+			var overlapped = new Slicer(overlapOptions).SplitDocumentChunksRaw(input);
+
+			// Assert
+			Assert.True(baseline.Count > 1, "Expected the input to split into multiple chunks.");
+			Assert.Equal(baseline.Count, overlapped.Count);
+			Assert.True(overlapped[1].StartOffset < baseline[1].StartOffset);
+			Assert.All(overlapped, chunk => Assert.True(chunk.TokenCount <= overlapOptions.MaxChunkTokenCount));
+		}
+
+		[Fact]
+		public void SplitDocumentChunksRaw_ThrowsWhenChunkHeaderExceedsMaxChunkTokenCount()
+		{
+			// Arrange
+			var options = new SlicerOptions { MaxChunkTokenCount = 1 };
+			var slicer = new Slicer(options);
+			var longHeader = string.Join(" ", Enumerable.Repeat("Header", 10));
+			string input = "Some content";
+
+			// Act & Assert
+			Assert.Throws<ArgumentOutOfRangeException>(() => slicer.SplitDocumentChunksRaw(input, null, longHeader));
+		}
+
+		[Fact]
+		public void TextUtilities_NormalizeLineEndings_ConvertsAllFormats()
+		{
+			// Arrange
+			string input = "First line\r\nSecond line\nThird line\rFourth line";
+
+			// Act
+			var result = TextUtilities.NormalizeLineEndings(input);
+
+			// Assert
+			Assert.Equal("First line\nSecond line\nThird line\nFourth line", result);
+		}
+
+		[Fact]
+		public void TextUtilities_CollapseWhitespace_LimitsConsecutiveSpaces()
+		{
+			// Arrange
+			string input = "Word1     Word2"; // Five spaces
+
+			// Act
+			var result = TextUtilities.CollapseWhitespace(input);
+
+			// Assert
+			Assert.Equal("Word1  Word2", result); // Collapsed to two spaces
+		}
+
+		[Fact]
+		public void TextUtilities_CollapseWhitespace_LimitsConsecutiveNewlines()
+		{
+			// Arrange
+			string input = "Line1\n\n\n\nLine2"; // Four newlines
+
+			// Act
+			var result = TextUtilities.CollapseWhitespace(input);
+
+			// Assert
+			Assert.Equal("Line1  Line2", result); // Collapsed to two spaces
+		}
+
+		[Fact]
+		public void CountTokens_ReturnsPositiveValue()
+		{
+			// Arrange
+			var slicer = new Slicer();
+			string content = "This is test content.";
+
+			// Act
+			var tokenCount = slicer.CountTokens(content);
+
+			// Assert
+			Assert.True(tokenCount > 0, "Expected positive token count.");
+		}
+
+		[Fact]
+		public void CountTokens_EmptyStringReturnsZero()
+		{
+			// Arrange
+			var slicer = new Slicer();
+			string content = "";
+
+			// Act
+			var tokenCount = slicer.CountTokens(content);
+
+			// Assert
+			Assert.Equal(0, tokenCount);
+		}
+	}
 }

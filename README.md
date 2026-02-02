@@ -26,6 +26,11 @@ GitHub: [https://github.com/drittich/SemanticSlicer](https://github.com/drittich
     - [Linux (systemd)](#linux-systemd)
     - [Windows](#windows)
   - [Sample Usage](#sample-usage)
+  - [Advanced Usage](#advanced-usage)
+    - [Split Engine Without Preprocessing](#split-engine-without-preprocessing)
+    - [Preprocessing Utilities](#preprocessing-utilities)
+    - [Prepare Content Separately](#prepare-content-separately)
+    - [Token Counting](#token-counting)
   - [Chunk Order](#chunk-order)
   - [Understanding Offsets](#understanding-offsets)
   - [Additional Metadata](#additional-metadata)
@@ -265,6 +270,76 @@ var documentChunks = slicer.GetDocumentChunks(text);
 Custom separators:
 
 You can pass in your own list if of separators if you wish, e.g., if you wish to add support for other documents.
+
+## Advanced Usage
+
+For advanced scenarios where you need full control over preprocessing, SemanticSlicer provides lower-level APIs:
+
+### Split Engine Without Preprocessing
+
+Use `SplitDocumentChunksRaw` when you want to apply your own preprocessing but still benefit from token-aware splitting, overlap, and indexing:
+
+```cs
+var slicer = new Slicer();
+// Apply your own custom preprocessing
+var customProcessed = MyCustomPreprocessing(rawHtml);
+// Split using the engine directly (no normalization, HTML stripping, or whitespace collapsing)
+var chunks = slicer.SplitDocumentChunksRaw(customProcessed);
+```
+
+**Important:** `SplitDocumentChunksRaw` treats content exactly as provided:
+- Does NOT normalize line endings
+- Does NOT strip HTML (even if `StripHtml` is true)
+- Does NOT collapse whitespace
+- Does NOT trim content
+- Offsets in returned chunks are relative to the exact content string you provide
+
+### Preprocessing Utilities
+
+SemanticSlicer exposes the same preprocessing utilities used internally:
+
+```cs
+// Normalize line endings (CRLF and CR to LF)
+var normalized = TextUtilities.NormalizeLineEndings(input);
+
+// Collapse excessive whitespace (max 2 consecutive spaces or newlines)
+var collapsed = TextUtilities.CollapseWhitespace(input);
+
+// Extract text from HTML (already public on Slicer instance)
+var slicer = new Slicer();
+var plainText = slicer.RemoveNonBodyContent(htmlContent);
+```
+
+Combine these with `SplitDocumentChunksRaw` for custom pipelines:
+
+```cs
+var slicer = new Slicer();
+var processed = TextUtilities.NormalizeLineEndings(input);
+processed = TextUtilities.CollapseWhitespace(processed);
+processed = MyCustomTransform(processed); // Your own logic
+var chunks = slicer.SplitDocumentChunksRaw(processed);
+```
+
+### Prepare Content Separately
+
+Get the preprocessed content and header without chunking:
+
+```cs
+var slicer = new Slicer();
+var (processedContent, processedHeader) = slicer.PrepareContentForChunking(rawInput, "Title: Doc");
+// The offsets returned by GetDocumentChunks are relative to processedContent
+```
+
+### Token Counting
+
+Count tokens using the same encoder configured for the slicer:
+
+```cs
+var slicer = new Slicer();
+int tokenCount = slicer.CountTokens("Some content");
+// Validate before chunking
+if (tokenCount > maxAllowed) { /* handle */ }
+```
 
 ## Chunk Order
 

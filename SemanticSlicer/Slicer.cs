@@ -65,7 +65,18 @@ namespace SemanticSlicer
 					throw new ArgumentException($"Encoding {encoding} is not supported.");
 			}
 		}
-
+	
+		/// <summary>
+		/// Counts the number of tokens in the provided content using the configured encoder.
+		/// This can be useful for advanced scenarios where you need to validate content size before chunking.
+		/// </summary>
+		/// <param name="content">The content to count tokens for.</param>
+		/// <returns>The number of tokens in the content according to the configured encoding (Cl100K, O200K, or Custom).</returns>
+		public int CountTokens(string content)
+		{
+			return _encoder.CountTokens(content);
+		}
+	
 		/// <summary>
 		/// Internal preprocessing method that prepares both content and chunk header for chunking operations.
 		/// Applies header newline normalization, validates header token count, and processes content
@@ -120,6 +131,74 @@ namespace SemanticSlicer
 			return PrepareInternal(content, chunkHeader);
 		}
 
+		/// <summary>
+		/// Advanced API: Splits content directly without applying normalization, HTML stripping, or whitespace collapsing.
+		/// This method exposes the splitting engine for advanced users who want to do their own preprocessing while still
+		/// benefiting from token-aware splitting, overlap, and indexing. The content is treated exactly as provided.
+		/// </summary>
+		/// <param name="content">The raw content to split. No normalization or preprocessing is applied.
+		/// This content must be in the exact form you want to split, including line endings and spacing.</param>
+		/// <param name="metadata">Optional metadata dictionary that will be copied to each chunk.</param>
+		/// <param name="chunkHeader">Optional header string prepended to each chunk (same rules as GetDocumentChunks:
+		/// validated for token count, always ends with newline).</param>
+		/// <returns>A list of DocumentChunks where StartOffset and EndOffset are relative to the exact 'content' parameter passed to this method.</returns>
+		/// <exception cref="ArgumentOutOfRangeException">Thrown when the chunk header token count is greater than or equal to MaxChunkTokenCount.</exception>
+		/// <exception cref="Exception">Thrown when unable to subdivide content with the configured separators.</exception>
+		/// <remarks>
+		/// Use this method when you need full control over preprocessing. For standard usage with automatic preprocessing, use GetDocumentChunks instead.
+		/// Unlike GetDocumentChunks, this method:
+		/// - Does NOT normalize line endings
+		/// - Does NOT strip HTML (even if StripHtml is true in options)
+		/// - Does NOT collapse whitespace
+		/// - Does NOT trim content
+		/// The offsets in returned chunks are relative to the exact content string you provide, making it suitable for custom preprocessing pipelines.
+		/// </remarks>
+		public List<DocumentChunk> SplitDocumentChunksRaw(string content, Dictionary<string, object?>? metadata = null, string chunkHeader = "")
+		{
+			_options.OverlapPercentage = Math.Clamp(_options.OverlapPercentage, 0, 100);
+	
+			// Prepare only the header (validation + newline normalization)
+			var massagedChunkHeader = chunkHeader;
+			if (!string.IsNullOrWhiteSpace(chunkHeader))
+			{
+				if (!massagedChunkHeader.EndsWith(LINE_ENDING_REPLACEMENT))
+				{
+					massagedChunkHeader = $"{massagedChunkHeader}{LINE_ENDING_REPLACEMENT}";
+				}
+			}
+	
+			// Validate header token count
+			var chunkHeaderTokenCount = _encoder.CountTokens(massagedChunkHeader);
+			if (chunkHeaderTokenCount >= _options.MaxChunkTokenCount)
+			{
+				throw new ArgumentOutOfRangeException($"Chunk header token count ({chunkHeaderTokenCount}) is greater than max chunk token count ({_options.MaxChunkTokenCount})");
+			}
+	
+			// Use content exactly as provided - no normalization, no trimming, no HTML stripping, no whitespace collapsing
+			var effectiveTokenCount = _encoder.CountTokens($"{massagedChunkHeader}{content}");
+	
+			var documentChunks = new List<DocumentChunk> {
+				new DocumentChunk {
+					Content = content,
+					Metadata = metadata,
+					TokenCount = effectiveTokenCount,
+					StartOffset = 0,
+					EndOffset = content.Length
+				}
+			};
+	
+			var chunks = SplitDocumentChunks(documentChunks, massagedChunkHeader);
+	
+			ApplyOverlap(chunks, massagedChunkHeader, content);
+	
+			for (int i = 0; i < chunks.Count; i++)
+			{
+				chunks[i].Index = i;
+			}
+	
+			return chunks;
+		}
+	
 		/// <summary>
 		/// Gets a list of document chunks for the given content.
 		/// </summary>
@@ -309,8 +388,7 @@ namespace SemanticSlicer
 		/// </returns>
 		private string CollapseWhitespace(string input)
 		{
-			// don't allow more than 2 line breaks in a row or 2 spaces in a row
-			return Regex.Replace(input, @"(\r?\n){3,}|\s{3,}", "  ");
+			return TextUtilities.CollapseWhitespace(input);
 		}
 
 		/// <summary>
@@ -627,7 +705,7 @@ namespace SemanticSlicer
 		/// <returns>The string with normalized line endings.</returns>
 		private static string NormalizeLineEndings(string input)
 		{
-			return LINE_ENDING_REGEX.Replace(input, LINE_ENDING_REPLACEMENT);
+			return TextUtilities.NormalizeLineEndings(input);
 		}
 	}
 }
