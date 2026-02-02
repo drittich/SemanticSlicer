@@ -67,16 +67,16 @@ namespace SemanticSlicer
 		}
 
 		/// <summary>
-		/// Gets a list of document chunks for the given content.
+		/// Internal preprocessing method that prepares both content and chunk header for chunking operations.
+		/// Applies header newline normalization, validates header token count, and processes content
+		/// through normalization, optional HTML stripping, and whitespace collapsing.
 		/// </summary>
-		/// <param name="content">A string representing the content of the document to be chunked.</param>
-		/// <param name="metadata">A dictionary representing the metadata of the document. It is a nullable parameter and its default value is null.</param>
-		/// <param name="chunkHeader">A string representing the header of every chunk. It has a default value of an empty string. It will always have at least one newline character separating it from the chunk content.</param>
-		/// <returns>Returns a list of DocumentChunks after performing a series of actions including normalization, token counting, splitting, indexing, and removing HTML tags, etc.</returns>
-		public List<DocumentChunk> GetDocumentChunks(string content, Dictionary<string, object?>? metadata = null, string chunkHeader = "")
+		/// <param name="content">The original content to be prepared.</param>
+		/// <param name="chunkHeader">The header to prepend to each chunk.</param>
+		/// <returns>A tuple containing (processedContent, processedChunkHeader).</returns>
+		/// <exception cref="ArgumentOutOfRangeException">Thrown when the chunk header token count is greater than or equal to MaxChunkTokenCount.</exception>
+		private (string, string) PrepareInternal(string content, string chunkHeader)
 		{
-			_options.OverlapPercentage = Math.Clamp(_options.OverlapPercentage, 0, 100);
-
 			var massagedChunkHeader = chunkHeader;
 			if (!string.IsNullOrWhiteSpace(chunkHeader))
 			{
@@ -101,6 +101,37 @@ namespace SemanticSlicer
 			}
 
 			massagedContent = CollapseWhitespace(massagedContent);
+
+			return (massagedContent, massagedChunkHeader);
+		}
+
+		/// <summary>
+		/// Prepares content for chunking by applying normalization, optional HTML stripping, and whitespace collapsing.
+		/// Returns both the processed content and the processed chunk header that will be used for chunking operations.
+		/// The offsets returned in DocumentChunks are relative to the ProcessedContent, not the original input.
+		/// Store the ProcessedContent if you need to interpret offsets later.
+		/// </summary>
+		/// <param name="content">A string representing the original content to be prepared.</param>
+		/// <param name="chunkHeader">A string representing the header to prepend to each chunk. It has a default value of an empty string. It will always have at least one newline character separating it from the chunk content.</param>
+		/// <returns>A tuple containing (ProcessedContent, ProcessedChunkHeader) ready for chunking.</returns>
+		/// <exception cref="ArgumentOutOfRangeException">Thrown when the chunk header token count is greater than or equal to MaxChunkTokenCount.</exception>
+		public (string ProcessedContent, string ProcessedChunkHeader) PrepareContentForChunking(string content, string chunkHeader = "")
+		{
+			return PrepareInternal(content, chunkHeader);
+		}
+
+		/// <summary>
+		/// Gets a list of document chunks for the given content.
+		/// </summary>
+		/// <param name="content">A string representing the content of the document to be chunked.</param>
+		/// <param name="metadata">A dictionary representing the metadata of the document. It is a nullable parameter and its default value is null.</param>
+		/// <param name="chunkHeader">A string representing the header of every chunk. It has a default value of an empty string. It will always have at least one newline character separating it from the chunk content.</param>
+		/// <returns>Returns a list of DocumentChunks after performing a series of actions including normalization, token counting, splitting, indexing, and removing HTML tags, etc.</returns>
+		public List<DocumentChunk> GetDocumentChunks(string content, Dictionary<string, object?>? metadata = null, string chunkHeader = "")
+		{
+			_options.OverlapPercentage = Math.Clamp(_options.OverlapPercentage, 0, 100);
+
+			var (massagedContent, massagedChunkHeader) = PrepareInternal(content, chunkHeader);
 
 			var effectiveTokenCount = _encoder.CountTokens($"{massagedChunkHeader}{massagedContent}");
 

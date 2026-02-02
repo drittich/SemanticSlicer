@@ -27,6 +27,7 @@ GitHub: [https://github.com/drittich/SemanticSlicer](https://github.com/drittich
     - [Windows](#windows)
   - [Sample Usage](#sample-usage)
   - [Chunk Order](#chunk-order)
+  - [Understanding Offsets](#understanding-offsets)
   - [Additional Metadata](#additional-metadata)
   - [Adding Headers to Chunks](#adding-headers-to-chunks)
   - [License](#license)
@@ -267,7 +268,42 @@ You can pass in your own list if of separators if you wish, e.g., if you wish to
 
 ## Chunk Order
 
-Chunks will be returned in the order they were found in the document, and contain an Index property you can use to put them back in order if necessary. Each chunk also includes `StartOffset` and `EndOffset` character positions relative to the normalized input text so you can align slices back to the source if needed.
+Chunks will be returned in the order they were found in the document, and contain an Index property you can use to put them back in order if necessary.
+
+## Understanding Offsets
+
+Each chunk includes `StartOffset` and `EndOffset` character positions. **These offsets are relative to the *preprocessed* content, not the original input.** SemanticSlicer normalizes line endings, optionally strips HTML, and collapses whitespace before chunking. If you need to interpret offsets or store the exact text that was chunked, use the `PrepareContentForChunking` method:
+
+```cs
+var slicer = new Slicer();
+var originalText = File.ReadAllText("MyDocument.html");
+
+// Get the prepared content that will be chunked
+var (processedContent, processedHeader) = slicer.PrepareContentForChunking(originalText);
+
+// Store processedContent in your database for later use with offsets
+var chunks = slicer.GetDocumentChunks(originalText);
+
+// Now you can use offsets to slice back into processedContent:
+foreach (var chunk in chunks)
+{
+    var contentSlice = processedContent.Substring(chunk.StartOffset, chunk.EndOffset - chunk.StartOffset);
+    // contentSlice will match chunk.Content (chunks are trimmed during splitting)
+}
+```
+
+With HTML stripping enabled (`StripHtml = true`), the difference between original and processed content is especially significant:
+
+```cs
+var options = new SlicerOptions { StripHtml = true };
+var slicer = new Slicer(options);
+var htmlText = "<html><body><p>Hello world</p></body></html>";
+
+var (processedContent, _) = slicer.PrepareContentForChunking(htmlText);
+// processedContent will be "Hello world" (tags stripped, text preserved)
+var chunks = slicer.GetDocumentChunks(htmlText);
+// chunk offsets refer to positions in "Hello world", not the original HTML
+```
 
 ## Additional Metadata
 

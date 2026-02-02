@@ -200,5 +200,110 @@ namespace SemanticSlicer.Tests
 			Assert.True(overlapped[1].StartOffset < baseline[1].StartOffset);
 			Assert.All(overlapped, chunk => Assert.True(chunk.TokenCount <= overlapOptions.MaxChunkTokenCount));
 		}
-        }
+
+		[Fact]
+		public void PrepareContentForChunking_ReturnsProcessedContent()
+		{
+			// Arrange
+			var slicer = new Slicer();
+			string input = "First line\r\nSecond line\nThird line\rFourth line";
+
+			// Act
+			var (processedContent, processedHeader) = slicer.PrepareContentForChunking(input);
+
+			// Assert - should normalize line endings and trim
+			Assert.Equal("First line\nSecond line\nThird line\nFourth line", processedContent);
+			Assert.Equal(string.Empty, processedHeader);
+		}
+
+		[Fact]
+		public void PrepareContentForChunking_ProcessesChunkHeader()
+		{
+			// Arrange
+			var slicer = new Slicer();
+			string input = "Some content";
+			string header = "Title: Test Document";
+
+			// Act
+			var (processedContent, processedHeader) = slicer.PrepareContentForChunking(input, header);
+
+			// Assert - header should have newline appended
+			Assert.Equal("Some content", processedContent);
+			Assert.Equal("Title: Test Document\n", processedHeader);
+		}
+
+		[Fact]
+		public void PrepareContentForChunking_StripsHtmlWhenConfigured()
+		{
+			// Arrange
+			var options = new SlicerOptions { StripHtml = true };
+			var slicer = new Slicer(options);
+			string input = "Some <b>HTML</b> content";
+
+			// Act
+			var (processedContent, _) = slicer.PrepareContentForChunking(input);
+
+			// Assert
+			Assert.Equal("Some HTML content", processedContent);
+		}
+
+		[Fact]
+		public void PrepareContentForChunking_ThrowsWhenHeaderExceedsLimit()
+		{
+			// Arrange
+			var options = new SlicerOptions { MaxChunkTokenCount = 1 };
+			var slicer = new Slicer(options);
+			var longHeader = string.Join(" ", Enumerable.Repeat("Header", 10));
+
+			// Act & Assert
+			Assert.Throws<ArgumentOutOfRangeException>(() => slicer.PrepareContentForChunking("content", longHeader));
+		}
+
+		[Fact]
+		public void GetDocumentChunks_OffsetsMatchPreparedContent()
+		{
+			// Arrange
+			var slicer = new Slicer();
+			string input = "Line one.\nLine two.\nLine three.";
+
+			// Act
+			var (processedContent, processedHeader) = slicer.PrepareContentForChunking(input);
+			var chunks = slicer.GetDocumentChunks(input);
+
+			// Assert - for a single-chunk result, offsets should span the entire prepared content
+			Assert.Single(chunks);
+			Assert.Equal(0, chunks[0].StartOffset);
+			Assert.Equal(processedContent.Length, chunks[0].EndOffset);
+			
+			// Verify content slice matches what's in the chunk (minus header)
+			var expectedContent = processedContent.Substring(chunks[0].StartOffset, chunks[0].EndOffset - chunks[0].StartOffset);
+			Assert.Equal(expectedContent, chunks[0].Content);
+		}
+
+		[Fact]
+		public void GetDocumentChunks_MultipleChunksOffsetsMatchPreparedContent()
+		{
+			// Arrange
+			var options = new SlicerOptions { MaxChunkTokenCount = 50 };
+			var slicer = new Slicer(options);
+			string input = @"In the heart of an enchanting forest, kissed by the golden rays of the sun, stood a charming little cottage. The whitewashed wooden walls, thatched roof, and cobblestone path leading to the doorstep were blanketed in hues of vivid green by the elegant garlands of crawling ivy.";
+
+			// Act
+			var (processedContent, _) = slicer.PrepareContentForChunking(input);
+			var chunks = slicer.GetDocumentChunks(input);
+
+			// Assert - all offsets should reference positions in the prepared content
+			Assert.True(chunks.Count > 1, "Expected multiple chunks for this test.");
+			foreach (var chunk in chunks)
+			{
+				Assert.True(chunk.StartOffset >= 0);
+				Assert.True(chunk.EndOffset <= processedContent.Length);
+				Assert.True(chunk.StartOffset < chunk.EndOffset);
+				
+				// Verify the chunk content matches the slice from prepared content (chunks are trimmed)
+				var expectedContent = processedContent.Substring(chunk.StartOffset, chunk.EndOffset - chunk.StartOffset).Trim();
+				Assert.Equal(expectedContent, chunk.Content);
+			}
+		}
+			     }
 }
