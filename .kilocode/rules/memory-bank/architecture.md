@@ -15,16 +15,22 @@ Core responsibilities:
 ## Components
 - Core
   - Slicer [SemanticSlicer.Slicer](SemanticSlicer/Slicer.cs:15)
-    - GetDocumentChunks [SemanticSlicer.Slicer.GetDocumentChunks()](SemanticSlicer/Slicer.cs:70)
-    - SplitDocumentChunks [SemanticSlicer.Slicer.SplitDocumentChunks()](SemanticSlicer/Slicer.cs:275)
-    - SplitChunkBySeparatorMatch [SemanticSlicer.Slicer.SplitChunkBySeparatorMatch()](SemanticSlicer/Slicer.cs:360)
-    - GetCentermostMatch [SemanticSlicer.Slicer.GetCentermostMatch()](SemanticSlicer/Slicer.cs:399)
-    - DoTextSplit [SemanticSlicer.Slicer.DoTextSplit()](SemanticSlicer/Slicer.cs:433)
-    - NormalizeLineEndings [SemanticSlicer.Slicer.NormalizeLineEndings()](SemanticSlicer/Slicer.cs:466)
-    - CollapseWhitespace [SemanticSlicer.Slicer.CollapseWhitespace()](SemanticSlicer/Slicer.cs:189)
-    - RemoveNonBodyContent [SemanticSlicer.Slicer.RemoveNonBodyContent()](SemanticSlicer/Slicer.cs:127)
-    - ExtractTitle [SemanticSlicer.Slicer.ExtractTitle()](SemanticSlicer/Slicer.cs:243)
-    - Encoder selection [SemanticSlicer.Slicer.GetEncoder()](SemanticSlicer/Slicer.cs:50)
+    - GetDocumentChunks [SemanticSlicer.Slicer.GetDocumentChunks()](SemanticSlicer/Slicer.cs:130) - Standard preprocessing + splitting
+    - SplitDocumentChunksRaw [SemanticSlicer.Slicer.SplitDocumentChunksRaw()](SemanticSlicer/Slicer.cs:122) - Advanced API: splitting without preprocessing
+    - PrepareContentForChunking [SemanticSlicer.Slicer.PrepareContentForChunking()](SemanticSlicer/Slicer.cs:118) - Separate preprocessing step
+    - CountTokens [SemanticSlicer.Slicer.CountTokens()](SemanticSlicer/Slicer.cs:70) - Public token counting
+    - SplitDocumentChunks [SemanticSlicer.Slicer.SplitDocumentChunks()](SemanticSlicer/Slicer.cs:395) - Internal recursive splitting engine (private)
+    - SplitChunkBySeparatorMatch [SemanticSlicer.Slicer.SplitChunkBySeparatorMatch()](SemanticSlicer/Slicer.cs:480) - Internal (private)
+    - GetCentermostMatch [SemanticSlicer.Slicer.GetCentermostMatch()](SemanticSlicer/Slicer.cs:547) - Internal (private)
+    - DoTextSplit [SemanticSlicer.Slicer.DoTextSplit()](SemanticSlicer/Slicer.cs:594) - Internal (private)
+    - NormalizeLineEndings [SemanticSlicer.Slicer.NormalizeLineEndings()](SemanticSlicer/Slicer.cs:627) - Internal wrapper (private)
+    - CollapseWhitespace [SemanticSlicer.Slicer.CollapseWhitespace()](SemanticSlicer/Slicer.cs:310) - Internal wrapper (private)
+    - RemoveNonBodyContent [SemanticSlicer.Slicer.RemoveNonBodyContent()](SemanticSlicer/Slicer.cs:248) - Public HTML-to-text
+    - ExtractTitle [SemanticSlicer.Slicer.ExtractTitle()](SemanticSlicer/Slicer.cs:363) - Public title extraction
+    - Encoder selection [SemanticSlicer.Slicer.GetEncoder()](SemanticSlicer/Slicer.cs:50) - Internal (private)
+  - TextUtilities [SemanticSlicer.TextUtilities](SemanticSlicer/TextUtilities.cs) - Public static preprocessing helpers
+    - NormalizeLineEndings [SemanticSlicer.TextUtilities.NormalizeLineEndings()](SemanticSlicer/TextUtilities.cs:24)
+    - CollapseWhitespace [SemanticSlicer.TextUtilities.CollapseWhitespace()](SemanticSlicer/TextUtilities.cs:37)
   - Options [SemanticSlicer.SlicerOptions](SemanticSlicer/SlicerOptions.cs:8)
     - Defaults: MaxChunkTokenCount=1000, MinChunkPercentage=10, Encoding=Cl100K, Separators=Text [SemanticSlicer.SlicerOptions](SemanticSlicer/SlicerOptions.cs:13)
     - Toggle: StripHtml [SemanticSlicer.SlicerOptions](SemanticSlicer/SlicerOptions.cs:31)

@@ -1,13 +1,21 @@
 # Context
 
 ## Current Focus
-- Establish a complete Memory Bank for SemanticSlicer covering product, architecture, tech, and operational tasks.
+- Advanced API expansion complete: exposed split engine and preprocessing utilities while keeping internal methods private.
 - Align documentation with repository sources: [README.md](README.md), [SemanticSlicer.Slicer()](SemanticSlicer/Slicer.cs:37), [WebApplication.MapPost()](SemanticSlicer.Service/Program.cs:12), [SemanticSlicer.Cli.Program](SemanticSlicer.Cli/Program.cs:1).
 
 ## Recent Changes
-- Added product overview [memory-bank/product.md](.kilocode/rules/memory-bank/product.md).
-- Documented architecture with components and data flow [memory-bank/architecture.md](.kilocode/rules/memory-bank/architecture.md).
-- Captured technologies, dependencies, build/publish steps [memory-bank/tech.md](.kilocode/rules/memory-bank/tech.md).
+- **Advanced API Expansion (v1.1.0 proposed):**
+  - Added public [`SemanticSlicer.Slicer.SplitDocumentChunksRaw()`](SemanticSlicer/Slicer.cs:122) for custom preprocessing pipelines
+  - Added public [`SemanticSlicer.TextUtilities`](SemanticSlicer/TextUtilities.cs) static class with `NormalizeLineEndings` and `CollapseWhitespace`
+  - Added public [`SemanticSlicer.Slicer.CountTokens()`](SemanticSlicer/Slicer.cs:70) for token counting
+  - Added public [`SemanticSlicer.Slicer.PrepareContentForChunking()`](SemanticSlicer/Slicer.cs:118) for separate preprocessing
+  - Internal split methods remain private by design
+  - Zero breaking changes; fully backward compatible
+  - Comprehensive test coverage (34 tests passing)
+  - Updated [README.md](README.md) with Advanced Usage section
+  - Created architecture plan [plans/public-api-expansion.md](plans/public-api-expansion.md)
+  - Created release notes [plans/release-notes-advanced-api.md](plans/release-notes-advanced-api.md)
 
 ## Next Steps
 - Create repeatable task entries for publishing CLI/service and using NuGet, including CLI `--overlap` and Service `overlapPercentage` examples [memory-bank/tasks.md](.kilocode/rules/memory-bank/tasks.md).

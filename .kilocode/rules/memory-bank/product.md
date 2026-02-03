@@ -38,9 +38,10 @@ References:
 - Simple defaults: text separators, MaxChunkTokenCount = 1000, Encoding = cl100k_base [SemanticSlicer.SlicerOptions](SemanticSlicer/SlicerOptions.cs:13).
 - Clear control via SlicerOptions: separators, encoding, token limits, StripHtml [SemanticSlicer.SlicerOptions](SemanticSlicer/SlicerOptions.cs:9).
 - Deterministic, stable chunk ordering and reproducible results.
-- Efficient token usage and minimal waste by collapsing whitespace and stripping extraneous HTML when requested [SemanticSlicer.Slicer.CollapseWhitespace()](SemanticSlicer/Slicer.cs:189).
+- Efficient token usage and minimal waste by collapsing whitespace and stripping extraneous HTML when requested [SemanticSlicer.Slicer.CollapseWhitespace()](SemanticSlicer/Slicer.cs:310).
 - Flexible metadata and optional chunk headers for downstream context preservation.
 - Easy operational paths: binaries, CLI publish, daemon, and REST service with low setup friction.
+- Advanced API for custom preprocessing pipelines via [SemanticSlicer.Slicer.SplitDocumentChunksRaw()](SemanticSlicer/Slicer.cs:122) and [SemanticSlicer.TextUtilities](SemanticSlicer/TextUtilities.cs).
 
 ## Document types and separators
 - Text: sentence/end punctuation and whitespace-aware splitting [SemanticSlicer.Separators.Text](SemanticSlicer/Separators.cs:12).
